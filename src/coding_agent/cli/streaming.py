@@ -49,9 +49,21 @@ def stream_response(
 
         out.hide_spinner()
 
-        full_text = "".join(accumulated)
-        if full_text:
-            session.conversation.append({"role": "assistant", "content": full_text})
+        # Prefer the full content block list (preserves tool_use blocks for multi-turn).
+        # Fall back to building content from tokens + tool_uses (covers fake handles in tests).
+        final_content: list[Any] = getattr(handle, "final_content", [])
+        if final_content:
+            session.conversation.append({"role": "assistant", "content": final_content})
+        else:
+            content: list[Any] = []
+            if accumulated:
+                content.append({"type": "text", "text": "".join(accumulated)})
+            content.extend(
+                {"type": "tool_use", "id": tu["id"], "name": tu["name"], "input": tu["input"]}
+                for tu in handle.tool_uses
+            )
+            if content:
+                session.conversation.append({"role": "assistant", "content": content})
 
         if not handle.cancelled:
             for tool_use in handle.tool_uses:
@@ -67,6 +79,7 @@ class _AnthropicStreamHandle:
         self.tokens: list[str] = []
         self.tool_uses: list[dict[str, Any]] = []
         self.cancelled: bool = False
+        self.final_content: list[Any] = []
 
     def cancel(self) -> None:
         """Request cancellation of the active stream."""
@@ -98,19 +111,14 @@ class AnthropicStream:
             tools=tools,  # type: ignore[arg-type]
             messages=messages,
         ) as sdk_stream:
-            for event in sdk_stream:
+            for text_chunk in sdk_stream.text_stream:
                 if handle.cancelled:
                     break
-                if (
-                    hasattr(event, "type")
-                    and event.type == "content_block_delta"
-                    and hasattr(event, "delta")
-                    and hasattr(event.delta, "text")
-                ):
-                    handle.tokens.append(event.delta.text)
+                handle.tokens.append(text_chunk)
 
             if not handle.cancelled:
                 final = sdk_stream.get_final_message()
+                handle.final_content = list(final.content)  # type: ignore[assignment]
                 for block in final.content:
                     if block.type == "tool_use":
                         handle.tool_uses.append({

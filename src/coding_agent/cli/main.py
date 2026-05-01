@@ -32,6 +32,18 @@ def _build_tools() -> list[dict[str, Any]]:
     ]
 
 
+def _make_executor() -> Any:  # noqa: ANN401
+    def execute(name: str, tool_input: dict[str, Any]) -> tuple[str, bool]:
+        for tool in ALL_TOOLS:
+            if tool.name == name:
+                try:
+                    return tool.function(tool_input), False
+                except Exception as exc:  # noqa: BLE001
+                    return str(exc), True
+        return f"Tool '{name}' not found", True
+    return execute
+
+
 def main() -> None:
     """Parse args, wire real implementations, run the loop."""
     parser = argparse.ArgumentParser(description="coding-agent CLI")
@@ -64,7 +76,7 @@ def main() -> None:
 
     out.print_markdown("**coding-agent** — type `/help` for commands, Ctrl+D to exit\n")
 
-    run_loop(inp, out, client, session)
+    run_loop(inp, out, client, session, tool_executor=_make_executor())
 
     sys.stdout.write("\n")
 
