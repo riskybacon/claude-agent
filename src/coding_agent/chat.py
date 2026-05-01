@@ -1,9 +1,14 @@
 """Step 1: Basic chat with Claude — no tools."""
 
+from __future__ import annotations
+
 import sys
-from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import anthropic
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def main() -> None:
