@@ -8,6 +8,7 @@ version = "0.1.0"
 [tasks]
 chat = "python -m coding_agent.chat"
 read = "python -m coding_agent.read"
+list-files = "python -m coding_agent.list_files"
 lint = "ruff check src/"
 fmt = "ruff format src/"
 typecheck = "mypy"
