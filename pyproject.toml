@@ -1,0 +1,78 @@
+[project]
+name = "coding-agent"
+version = "0.1.0"
+description = "Build your own coding agent — Python edition"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Jeff Bowles", email = "jbowles@riskybacon.com" }]
+requires-python = ">=3.14"
+dependencies = [
+    "anthropic>=0.97.0",
+]
+
+[project.scripts]
+coding-agent = "coding_agent.chat:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/coding_agent"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+indent-width = 4
+exclude = [
+    ".pixi/",
+    "__pycache__/",
+]
+
+[tool.ruff.lint]
+select = ["ALL"]
+extend-select = ["I"]
+ignore = [
+    "COM812",   # trailing comma — conflicts with ruff formatter
+    "D203",     # one-blank-line-before-class — conflicts with D211
+    "D213",     # multi-line-summary-second-line — conflicts with D212
+    "FIX002",   # line contains TODO
+    "N806",     # variable in function should be lowercase
+    "S101",     # use of assert
+    "T201",     # print() calls (we use them intentionally in CLI output)
+    "TC001",    # move application import into TYPE_CHECKING block
+    "TD002",    # missing TODO author
+    "TD003",    # missing TODO issue link
+    "TRY003",   # avoid long messages outside exception class
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["coding_agent"]
+
+[tool.mypy]
+python_version = "3.14"
+allow_redefinition = false
+allow_untyped_globals = false
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+no_implicit_reexport = true
+strict_equality = true
+strict_optional = true
+warn_no_return = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_ignores = false
+files = ["src/"]
+exclude = [
+    "\\.pixi/",
+]
+
+[[tool.mypy.overrides]]
+module = ["anthropic.*"]
+ignore_missing_imports = true
