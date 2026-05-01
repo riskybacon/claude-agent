@@ -2,6 +2,13 @@
 
 There are three distinct ideas in `read.py`.
 
+## 0. The API is stateless — tools are re-sent every call
+
+Claude has no memory between API calls. Every call to `run_inference` sends the full tool list as
+part of the request — the same way it sends the model name and the conversation history. There is
+no registration step, no persistent session. If you didn't include `tools=` in a call, Claude
+would have no idea `read_file` exists for that call, even if you sent it on the previous one.
+
 ## 1. Telling Claude what tools exist
 
 `READ_FILE_SCHEMA` is a plain JSON Schema dict — it's the contract Claude reads to know what
