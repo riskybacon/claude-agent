@@ -1,10 +1,25 @@
 """Tests for the main input loop."""
 
+from contextlib import contextmanager
+from typing import Any
+
 import pytest
 
 from coding_agent.cli.loop import run_loop
 from coding_agent.cli.session import Session
 from tests.fakes import FakeInput, FakeOutput, FakeStreamingClient
+
+
+class _RaisingClient:
+    """Streaming client that always raises on stream()."""
+
+    def __init__(self, exc: Exception) -> None:
+        self._exc = exc
+
+    @contextmanager
+    def stream(self, **_kwargs: Any):  # noqa: ANN202
+        raise self._exc
+        yield  # noqa: unreachable — makes this a generator so @contextmanager works
 
 
 @pytest.fixture()
@@ -51,3 +66,41 @@ def test_empty_input_is_skipped(session: Session) -> None:
 def test_none_input_exits_loop(session: Session) -> None:
     inp = FakeInput([None])
     run_loop(inp, FakeOutput(), FakeStreamingClient(tokens=[]), session)
+
+
+def test_api_error_is_shown_not_raised(session: Session) -> None:
+    out = FakeOutput()
+    client = _RaisingClient(RuntimeError("rate limit exceeded"))
+    run_loop(FakeInput(["hello", None]), out, client, session)
+    assert any("rate limit exceeded" in e for e in out.errors)
+
+
+def test_loop_continues_after_api_error(session: Session) -> None:
+    from tests.fakes import FakeStreamHandle
+
+    out = FakeOutput()
+    inp = FakeInput(["bad", "good", None])
+
+    class _MixedClient:
+        def __init__(self) -> None:
+            self._calls = 0
+
+        @contextmanager
+        def stream(self, model: str, system: str, tools: Any, messages: Any):  # noqa: ANN202
+            self._calls += 1
+            if self._calls == 1:
+                raise RuntimeError("rate limit")
+                yield  # noqa: unreachable
+            else:
+                yield FakeStreamHandle(tokens=["hi"])
+
+    run_loop(inp, out, _MixedClient(), session)
+    assert any("rate limit" in e for e in out.errors)
+    assert out.tokens == ["hi"]
+
+
+def test_failed_turn_does_not_corrupt_conversation(session: Session) -> None:
+    client = _RaisingClient(RuntimeError("oops"))
+    run_loop(FakeInput(["hello", None]), FakeOutput(), client, session)
+    # The user message must be removed — no orphaned turn without an assistant reply
+    assert session.conversation == []

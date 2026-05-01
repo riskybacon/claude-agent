@@ -43,7 +43,12 @@ def run_loop(
 
         session.conversation.append({"role": "user", "content": line})
         forwarded.append(line)
-        _run_turn(client, session, out, tool_executor)
+        try:
+            _run_turn(client, session, out, tool_executor)
+        except Exception as exc:  # noqa: BLE001 — display all API/network errors, don't crash
+            session.conversation.pop()
+            forwarded.pop()
+            out.print_error(str(exc))
 
     return forwarded
 
