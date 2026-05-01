@@ -10,6 +10,13 @@ from coding_agent.tools import ALL_TOOLS, Tool
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+SYSTEM_PROMPT = """You are a coding assistant working in the user's local repository.
+
+You have tools to read files, list directories, run shell commands, edit files, and search code.
+Before making any changes, read the relevant files first so your edits are accurate.
+Prefer targeted edits over rewriting entire files.
+When you run a command to verify something, show the output to the user."""
+
 
 class Agent:
     """Chat agent with tool-use support."""
@@ -109,6 +116,7 @@ class Agent:
         return self.client.messages.create(
             model="claude-opus-4-5",
             max_tokens=1024,
+            system=SYSTEM_PROMPT,
             tools=[
                 {
                     "name": t.name,
