@@ -47,7 +47,7 @@ The pre-commit hook runs `ruff check` automatically and blocks commits that fail
 ## Code Style
 
 - Python 3.14, PEP 8, 4-space indent, `snake_case` / `CamelCase`
-- `from __future__ import annotations` at the top of every module — keeps type annotations as strings so `TYPE_CHECKING`-guarded imports work without runtime overhead
+- Do NOT use `from __future__ import annotations` — that PEP 563 pattern is legacy and was never made the default. Python 3.14 has PEP 649 deferred annotation evaluation built in, so `TYPE_CHECKING`-guarded imports already work without it.
 - Type hints everywhere; mypy is strict
 - Line length: 100 chars (`pyproject.toml`)
 - Ruff with `select = ["ALL"]` — check `pyproject.toml` for the intentional ignore list before adding a `# noqa`

@@ -1,7 +1,5 @@
 """Step 2: Add a read_file tool and the core tool-execution loop."""
 
-from __future__ import annotations
-
 import sys
 from dataclasses import dataclass
 from pathlib import Path

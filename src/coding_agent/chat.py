@@ -1,7 +1,5 @@
 """Step 1: Basic chat with Claude — no tools."""
 
-from __future__ import annotations
-
 import sys
 from typing import TYPE_CHECKING
 
