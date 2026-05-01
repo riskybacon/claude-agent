@@ -75,3 +75,75 @@ def test_tool_result_added_to_conversation(session: Session) -> None:
     # conversation: user, assistant (tool_use), user (tool_result), assistant (text)
     roles = [m["role"] for m in session.conversation]
     assert roles == ["user", "assistant", "user", "assistant"]
+
+
+def test_large_tool_result_is_truncated_in_conversation(session: Session) -> None:
+    """Tool results over 1000 chars must be truncated before storing in conversation."""
+    from coding_agent.cli.loop import run_loop, _MAX_TOOL_RESULT_IN_HISTORY
+
+    big_result = "x" * 5000
+    first = FakeStreamHandle(tool_uses=[{"name": "read_file", "id": "tu_1", "input": {"path": "big.py"}}])
+    second = FakeStreamHandle(tokens=["Done!"])
+    client = _SequentialStreamingClient([first, second])
+
+    run_loop(
+        FakeInput(["read big file", None]),
+        FakeOutput(),
+        client,
+        session,
+        tool_executor=lambda n, i: (big_result, False),
+    )
+
+    # Find the tool_result message (role="user" with list content)
+    tool_result_msg = next(
+        m for m in session.conversation
+        if m["role"] == "user" and isinstance(m["content"], list)
+    )
+    stored = tool_result_msg["content"][0]["content"]
+    assert len(stored) <= _MAX_TOOL_RESULT_IN_HISTORY + 100  # allow for truncation suffix
+    assert "truncated" in stored
+
+
+def test_small_tool_result_is_stored_in_full(session: Session) -> None:
+    """Tool results under 1000 chars must be stored verbatim."""
+    from coding_agent.cli.loop import run_loop, _MAX_TOOL_RESULT_IN_HISTORY
+
+    small_result = "file.py\nother.py\n"
+    first = FakeStreamHandle(tool_uses=[{"name": "bash", "id": "tu_1", "input": {"command": "ls"}}])
+    second = FakeStreamHandle(tokens=["Done!"])
+    client = _SequentialStreamingClient([first, second])
+
+    run_loop(
+        FakeInput(["list files", None]),
+        FakeOutput(),
+        client,
+        session,
+        tool_executor=lambda n, i: (small_result, False),
+    )
+
+    tool_result_msg = next(
+        m for m in session.conversation
+        if m["role"] == "user" and isinstance(m["content"], list)
+    )
+    stored = tool_result_msg["content"][0]["content"]
+    assert stored == small_result
+
+
+def test_full_result_still_available_for_expand(session: Session) -> None:
+    """session.last_tool_result must hold the full result even when conversation is truncated."""
+    from coding_agent.cli.loop import run_loop
+
+    big_result = "y" * 5000
+    first = FakeStreamHandle(tool_uses=[{"name": "read_file", "id": "tu_1", "input": {"path": "f.py"}}])
+    second = FakeStreamHandle(tokens=["Done!"])
+    client = _SequentialStreamingClient([first, second])
+
+    run_loop(
+        FakeInput(["read file", None]),
+        FakeOutput(),
+        client,
+        session,
+        tool_executor=lambda n, i: (big_result, False),
+    )
+
+    assert session.last_tool_result == big_result

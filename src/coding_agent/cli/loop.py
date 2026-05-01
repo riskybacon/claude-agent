@@ -10,6 +10,8 @@ from coding_agent.cli.streaming import stream_response
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+_MAX_TOOL_RESULT_IN_HISTORY = 1000
+
 _HELP_TEXT = """\
 Available commands:
   /help           Show this message
@@ -72,10 +74,16 @@ def _run_turn(
             result, is_error = tool_executor(tu["name"], tu["input"])
             session.last_tool_result = result
             out.print_tool_line(tu["name"], tu["input"], result)
+            _suffix = "\n…[truncated — use /expand to see full result]"
+            stored = (
+                result
+                if len(result) <= _MAX_TOOL_RESULT_IN_HISTORY
+                else result[:_MAX_TOOL_RESULT_IN_HISTORY] + _suffix
+            )
             tool_results.append({
                 "type": "tool_result",
                 "tool_use_id": tu["id"],
-                "content": result,
+                "content": stored,
                 "is_error": is_error,
             })
 
