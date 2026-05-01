@@ -11,6 +11,7 @@ dependencies = [
 
 [project.scripts]
 coding-agent = "coding_agent.chat:main"
+coding-agent-cli = "coding_agent.cli.main:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -68,10 +69,13 @@ warn_redundant_casts = true
 warn_return_any = true
 warn_unreachable = true
 warn_unused_ignores = false
-files = ["src/"]
+files = ["src/", "tests/"]
 exclude = [
     "\\.pixi/",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [[tool.mypy.overrides]]
 module = ["anthropic.*"]

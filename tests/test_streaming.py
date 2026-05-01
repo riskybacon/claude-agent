@@ -1,0 +1,50 @@
+"""Tests for stream_response."""
+
+import pytest
+
+from coding_agent.cli.session import Session
+from coding_agent.cli.streaming import stream_response
+from tests.fakes import FakeOutput, FakeStreamHandle, FakeStreamingClient
+
+
+@pytest.fixture()
+def session() -> Session:
+    """Session with one user message already appended."""
+    s = Session(model="opus", system_prompt="system", tools=[])
+    s.conversation.append({"role": "user", "content": "hi"})
+    return s
+
+
+def test_tokens_printed_as_they_arrive(session: Session) -> None:
+    out = FakeOutput()
+    client = FakeStreamingClient(tokens=["hello", " world"])
+    stream_response(client, session, out)
+    assert out.tokens == ["hello", " world"]
+
+
+def test_spinner_shown_before_first_token(session: Session) -> None:
+    out = FakeOutput()
+    client = FakeStreamingClient(tokens=["hi"])
+    stream_response(client, session, out)
+    assert out.spinner_shown_before_first_token
+
+
+def test_spinner_hidden_after_streaming_ends(session: Session) -> None:
+    out = FakeOutput()
+    client = FakeStreamingClient(tokens=["hi"])
+    stream_response(client, session, out)
+    assert not out.spinner_visible
+
+
+def test_final_message_appended_to_conversation(session: Session) -> None:
+    client = FakeStreamingClient(tokens=["hi"])
+    stream_response(client, session, FakeOutput())
+    assert len(session.conversation) == 2  # user + assistant
+
+
+def test_tool_use_triggers_tool_execution(session: Session) -> None:
+    tool_use = {"name": "read_file", "id": "tu_1", "input": {"path": "foo.py"}}
+    client = FakeStreamingClient(tokens=[], tool_uses=[tool_use])
+    executed: list[dict] = []
+    stream_response(client, session, FakeOutput(), on_tool=executed.append)
+    assert executed[0]["name"] == "read_file"
