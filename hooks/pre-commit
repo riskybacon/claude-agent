@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PIXI="${PIXI_EXE:-$(command -v pixi 2>/dev/null || echo "$HOME/.pixi/bin/pixi")}"
+
+echo "→ ruff lint..."
+"$PIXI" run lint

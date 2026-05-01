@@ -11,6 +11,7 @@ read = "python -m coding_agent.read"
 lint = "ruff check src/"
 fmt = "ruff format src/"
 typecheck = "mypy"
+install-hooks = "ln -sf ../../hooks/pre-commit .git/hooks/pre-commit"
 
 [dependencies]
 python = ">=3.14.4,<3.15"
