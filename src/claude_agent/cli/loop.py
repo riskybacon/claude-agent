@@ -90,13 +90,23 @@ def _run_turn(
             break
 
         tool_results: list[dict[str, Any]] = []
+        limit_reached = False
         for tu in tool_uses:
             if tool_calls_made >= _MAX_TOOL_CALLS_PER_TURN:
-                out.print_error(
-                    f"Hit tool call limit ({_MAX_TOOL_CALLS_PER_TURN})"
-                    " - stopping to prevent runaway costs"
-                )
-                break
+                if not limit_reached:
+                    out.print_error(
+                        f"Hit tool call limit ({_MAX_TOOL_CALLS_PER_TURN})"
+                        " - stopping to prevent runaway costs"
+                    )
+                    limit_reached = True
+                _msg = f"Not executed: {_MAX_TOOL_CALLS_PER_TURN}-tool limit reached"
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tu["id"],
+                    "content": _msg,
+                    "is_error": True,
+                })
+                continue
 
             tool_calls_made += 1
             session.tool_calls_made += 1
@@ -118,6 +128,8 @@ def _run_turn(
             })
 
         session.conversation.append({"role": "user", "content": tool_results})  # type: ignore[typeddict-item]
+        if limit_reached:
+            break
 
 
 def _dispatch(name: str, args: list[str], session: Session, out: OutputWriter) -> None:

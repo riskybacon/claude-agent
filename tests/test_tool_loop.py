@@ -14,6 +14,32 @@ from claude_agent.cli.session import Session
 from tests.fakes import FakeInput, FakeOutput, FakeStreamHandle
 
 
+def _tool_use_result_invariant(conversation: list[dict[str, Any]]) -> None:
+    """Assert every tool_use block has exactly one matching tool_result in the next message."""
+    for i, msg in enumerate(conversation):
+        if msg["role"] != "assistant" or not isinstance(msg["content"], list):
+            continue
+        tool_use_ids = {
+            block["id"]
+            for block in msg["content"]
+            if isinstance(block, dict) and block.get("type") == "tool_use"
+        }
+        if not tool_use_ids:
+            continue
+        assert i + 1 < len(conversation), "assistant tool_use message has no following message"
+        next_msg = conversation[i + 1]
+        assert next_msg["role"] == "user", "message after tool_use is not a user message"
+        assert isinstance(next_msg["content"], list), "tool_result message has empty/non-list content"
+        result_ids = {
+            block["tool_use_id"]
+            for block in next_msg["content"]
+            if isinstance(block, dict) and block.get("type") == "tool_result"
+        }
+        assert tool_use_ids == result_ids, (
+            f"tool_use ids {tool_use_ids} do not match tool_result ids {result_ids}"
+        )
+
+
 class _SequentialStreamingClient:
     """Yields a different FakeStreamHandle on each successive stream() call."""
 
@@ -162,6 +188,53 @@ def test_tool_call_limit_prevents_runaway_loops(session: Session) -> None:
     assert len(out.tool_lines) == _MAX_TOOL_CALLS_PER_TURN
     assert len(out.errors) >= 1
     assert any("tool call limit" in error for error in out.errors)
+
+
+def test_tool_call_limit_all_tool_uses_have_results(session: Session) -> None:
+    """Every tool_use must have a matching tool_result even when the limit fires mid-response."""
+    from claude_agent.cli.loop import run_loop, _MAX_TOOL_CALLS_PER_TURN
+
+    over_limit = _MAX_TOOL_CALLS_PER_TURN + 3
+    tools = [{"name": "bash", "id": f"tu_{i}", "input": {"command": "echo hi"}}
+             for i in range(over_limit)]
+    client = _SequentialStreamingClient([FakeStreamHandle(tool_uses=tools)])
+
+    run_loop(
+        FakeInput(["go", None]),
+        FakeOutput(),
+        client,
+        session,
+        tool_executor=lambda n, i: ("ok", False),
+    )
+
+    _tool_use_result_invariant(session.conversation)
+
+
+def test_tool_call_limit_accumulated_across_responses_no_empty_content(session: Session) -> None:
+    """When the limit fires before executing any tool in a response, no empty user message is appended."""
+    from claude_agent.cli.loop import run_loop, _MAX_TOOL_CALLS_PER_TURN
+
+    # First response exactly fills the limit; second response pushes over it immediately.
+    first_tools = [{"name": "bash", "id": f"tu_a{i}", "input": {}} for i in range(_MAX_TOOL_CALLS_PER_TURN)]
+    second_tools = [{"name": "bash", "id": "tu_b0", "input": {}}, {"name": "bash", "id": "tu_b1", "input": {}}]
+
+    client = _SequentialStreamingClient([
+        FakeStreamHandle(tool_uses=first_tools),
+        FakeStreamHandle(tool_uses=second_tools),
+    ])
+
+    run_loop(
+        FakeInput(["go", None]),
+        FakeOutput(),
+        client,
+        session,
+        tool_executor=lambda n, i: ("ok", False),
+    )
+
+    for msg in session.conversation:
+        if msg["role"] == "user":
+            assert msg["content"], f"empty user message found in conversation: {msg}"
+    _tool_use_result_invariant(session.conversation)
 
 
 def test_newline_appears_between_response_tokens_and_tool_line(session: Session) -> None:
