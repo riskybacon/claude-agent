@@ -152,27 +152,3 @@ def test_full_result_still_available_for_expand(session: Session) -> None:
     )
 
     assert session.last_tool_result == big_result
-
-
-def test_newlines_printed_around_tool_calls(session: Session) -> None:
-    """Newlines should separate streamed tokens from tool output."""
-    from coding_agent.cli.loop import run_loop
-
-    first = FakeStreamHandle(
-        tokens=["thinking..."],
-        tool_uses=[{"name": "bash", "id": "tu_1", "input": {"command": "ls"}}],
-    )
-    second = FakeStreamHandle(tokens=["Done!"])
-    client = _SequentialStreamingClient([first, second])
-    out = FakeOutput()
-
-    run_loop(
-        FakeInput(["list files", None]),
-        out,
-        client,
-        session,
-        tool_executor=lambda n, i: ("file.py", False),
-    )
-
-    # Should have newlines: after first tokens, after tool lines, after final tokens
-    assert out.newline_count >= 2

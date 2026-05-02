@@ -29,7 +29,6 @@ class FakeOutput:
     def __init__(self) -> None:
         """Initialise with empty capture buffers."""
         self.tokens: list[str] = []
-        self.newline_count: int = 0
         self.tool_lines: list[str] = []
         self.markdown_calls: list[str] = []
         self.errors: list[str] = []
@@ -42,10 +41,6 @@ class FakeOutput:
         """Capture a token."""
         self._first_token_received = True
         self.tokens.append(text)
-
-    def print_newline(self) -> None:
-        """Capture a newline."""
-        self.newline_count += 1
 
     def print_tool_line(self, name: str, args: dict[str, Any], result: str) -> None:
         """Capture a tool line with byte count."""

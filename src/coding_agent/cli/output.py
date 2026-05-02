@@ -18,10 +18,6 @@ class RichOutput:
         """Print a streaming token fragment without a newline."""
         self._console.print(text, end="")
 
-    def print_newline(self) -> None:
-        """Print a newline to separate output sections."""
-        self._console.print()
-
     def print_tool_line(self, name: str, args: dict[str, Any], result: str) -> None:
         """Print a collapsed tool-call line."""
         byte_count = len(result.encode())
