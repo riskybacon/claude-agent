@@ -1,9 +1,22 @@
 """Mutable session state for the CLI."""
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
+
+from claude_agent.cli.pricing import estimate_cost
 
 if TYPE_CHECKING:
     import anthropic
+
+
+@dataclass(frozen=True)
+class TokenSnapshot:
+    """Immutable capture of session token counters at a point in time."""
+
+    input_tokens: int
+    output_tokens: int
+    cache_read_tokens: int
+    cache_creation_tokens: int
 
 
 class Session:
@@ -40,3 +53,22 @@ class Session:
     def switch_model(self, model: str) -> None:
         """Switch the active model mid-session."""
         self.model = model
+
+    def token_snapshot(self) -> TokenSnapshot:
+        """Return a snapshot of the current token counters."""
+        return TokenSnapshot(
+            input_tokens=self.input_tokens,
+            output_tokens=self.output_tokens,
+            cache_read_tokens=self.cache_read_tokens,
+            cache_creation_tokens=self.cache_creation_tokens,
+        )
+
+    def cost_since(self, snapshot: TokenSnapshot) -> float:
+        """Return the estimated cost in USD of tokens accumulated since snapshot."""
+        return estimate_cost(
+            model=self.model,
+            input_tokens=self.input_tokens - snapshot.input_tokens,
+            output_tokens=self.output_tokens - snapshot.output_tokens,
+            cache_read_tokens=self.cache_read_tokens - snapshot.cache_read_tokens,
+            cache_creation_tokens=self.cache_creation_tokens - snapshot.cache_creation_tokens,
+        )
