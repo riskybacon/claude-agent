@@ -110,8 +110,8 @@ def test_no_double_newline_when_last_token_ends_with_newline(session: Session) -
     assert "newline" not in _kinds(out)
 
 
-def test_no_newline_when_no_tool_uses(session: Session) -> None:
+def test_newline_emitted_after_text_only_response(session: Session) -> None:
     handle = FakeStreamHandle(tokens=["just a response"])
     out = FakeOutput()
     stream_response(FakeStreamingClient(tokens=[], handle=handle), session, out)
-    assert "newline" not in _kinds(out)
+    assert "newline" in _kinds(out)

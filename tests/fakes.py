@@ -79,6 +79,10 @@ class FakeOutput:
         """Hide spinner."""
         self.spinner_visible = False
 
+    def event_kinds(self) -> list[str]:
+        """Return the kind field of every recorded event, in order."""
+        return [e[0] for e in self.events]
+
 
 class FakeStreamHandle:
     """Fake stream handle with pre-set tokens and tool uses."""

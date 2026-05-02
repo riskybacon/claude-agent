@@ -178,3 +178,13 @@ def test_high_token_usage_shows_warning(session: Session) -> None:
         session,
     )
     assert any("token" in e.lower() for e in out.errors)
+
+
+def test_newline_after_text_only_response_before_next_prompt(session: Session) -> None:
+    out = FakeOutput()
+    run_loop(FakeInput(["hello", None]), out, FakeStreamingClient(tokens=["hi there"]), session)
+    kinds = out.event_kinds()
+    last_token_idx = max(i for i, k in enumerate(kinds) if k == "token")
+    assert any(k == "newline" and i > last_token_idx for i, k in enumerate(kinds)), (
+        f"no newline after final response token; events: {kinds}"
+    )
