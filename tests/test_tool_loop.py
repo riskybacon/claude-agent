@@ -14,7 +14,7 @@ from claude_agent.cli.session import Session
 from tests.fakes import FakeInput, FakeOutput, FakeStreamHandle
 
 
-def _tool_use_result_invariant(conversation: list[dict[str, Any]]) -> None:
+def _tool_use_result_invariant(conversation: list[Any]) -> None:
     """Assert every tool_use block has exactly one matching tool_result in the next message."""
     for i, msg in enumerate(conversation):
         if msg["role"] != "assistant" or not isinstance(msg["content"], list):
@@ -286,3 +286,106 @@ def test_full_result_still_available_for_expand(session: Session) -> None:
     )
 
     assert session.last_tool_result == big_result
+
+
+# --- cost injection / hard stop ---
+
+def test_cost_injection_adds_text_block_after_n_tool_calls(session: Session) -> None:
+    """After _COST_INJECTION_INTERVAL tool calls, a cost-report text block appears in tool results."""
+    from claude_agent.cli.loop import run_loop, _COST_INJECTION_INTERVAL
+
+    tools = [{"name": "bash", "id": f"tu_{i}", "input": {}} for i in range(_COST_INJECTION_INTERVAL)]
+    client = _SequentialStreamingClient([
+        FakeStreamHandle(tool_uses=tools),
+        FakeStreamHandle(tokens=["done"]),
+    ])
+
+    run_loop(FakeInput(["go", None]), FakeOutput(), client, session,
+             tool_executor=lambda n, i: ("ok", False))
+
+    tool_result_msg = next(
+        m for m in session.conversation
+        if m["role"] == "user" and isinstance(m["content"], list)
+    )
+    text_blocks: list[Any] = [b for b in tool_result_msg["content"]
+                               if isinstance(b, dict) and b.get("type") == "text"]
+    assert len(text_blocks) >= 1
+    assert "cost" in text_blocks[0]["text"].lower()
+
+
+def test_no_cost_injection_before_n_tool_calls(session: Session) -> None:
+    """No cost text block is injected when fewer than _COST_INJECTION_INTERVAL tools have run."""
+    from claude_agent.cli.loop import run_loop, _COST_INJECTION_INTERVAL
+
+    tools = [{"name": "bash", "id": f"tu_{i}", "input": {}} for i in range(_COST_INJECTION_INTERVAL - 1)]
+    client = _SequentialStreamingClient([
+        FakeStreamHandle(tool_uses=tools),
+        FakeStreamHandle(tokens=["done"]),
+    ])
+
+    run_loop(FakeInput(["go", None]), FakeOutput(), client, session,
+             tool_executor=lambda n, i: ("ok", False))
+
+    for msg in session.conversation:
+        if msg["role"] == "user" and isinstance(msg["content"], list):
+            text_blocks = [b for b in msg["content"]
+                           if isinstance(b, dict) and b.get("type") == "text"]
+            assert text_blocks == [], f"unexpected text blocks: {text_blocks}"
+
+
+def test_cost_hard_stop_prevents_tool_execution(session: Session) -> None:
+    """When stream cost exceeds _COST_HARD_STOP, tools are not executed."""
+    from claude_agent.cli.loop import run_loop
+    from claude_agent.cli.session import Session as _Session
+
+    # 100k input tokens at Sonnet ($3/M) = $0.30 > $0.25 threshold
+    expensive_handle = FakeStreamHandle(
+        tool_uses=[{"name": "bash", "id": "tu_0", "input": {}}],
+        input_tokens=100_000,
+    )
+    s = _Session(model="claude-sonnet-4-6", system_prompt="s", tools=[])
+    executed: list[str] = []
+    client = _SequentialStreamingClient([expensive_handle])
+
+    def _executor(name: str, inp: dict[str, Any]) -> tuple[str, bool]:
+        executed.append(name)
+        return "ok", False
+
+    run_loop(FakeInput(["go", None]), FakeOutput(), client, s, tool_executor=_executor)
+
+    assert executed == []
+
+
+def test_cost_hard_stop_shows_error(session: Session) -> None:
+    """An error message mentioning cost is shown when the hard stop fires."""
+    from claude_agent.cli.loop import run_loop
+    from claude_agent.cli.session import Session as _Session
+
+    expensive_handle = FakeStreamHandle(
+        tool_uses=[{"name": "bash", "id": "tu_0", "input": {}}],
+        input_tokens=100_000,
+    )
+    s = _Session(model="claude-sonnet-4-6", system_prompt="s", tools=[])
+    out = FakeOutput()
+    client = _SequentialStreamingClient([expensive_handle])
+
+    run_loop(FakeInput(["go", None]), out, client, s,
+             tool_executor=lambda n, i: ("ok", False))
+
+    assert any("cost" in e.lower() for e in out.errors)
+
+
+def test_cost_hard_stop_all_tool_uses_have_results(session: Session) -> None:
+    """Every tool_use must have a matching tool_result even when the hard stop fires."""
+    from claude_agent.cli.loop import run_loop
+    from claude_agent.cli.session import Session as _Session
+
+    tools = [{"name": "bash", "id": f"tu_{i}", "input": {}} for i in range(3)]
+    expensive_handle = FakeStreamHandle(tool_uses=tools, input_tokens=100_000)
+    s = _Session(model="claude-sonnet-4-6", system_prompt="s", tools=[])
+    client = _SequentialStreamingClient([expensive_handle])
+
+    run_loop(FakeInput(["go", None]), FakeOutput(), client, s,
+             tool_executor=lambda n, i: ("ok", False))
+
+    _tool_use_result_invariant(s.conversation)

@@ -12,7 +12,8 @@ if TYPE_CHECKING:
 
 _MAX_TOOL_RESULT_IN_HISTORY = 1000
 _MAX_TOOL_CALLS_PER_TURN = 20
-_INPUT_TOKEN_WARNING_THRESHOLD = 100_000
+_COST_INJECTION_INTERVAL = 5
+_COST_HARD_STOP = 0.25  # USD per turn window
 
 _HELP_TEXT = """\
 Available commands:
@@ -22,7 +23,7 @@ Available commands:
   /expand         Print the full output of the most recent tool call
   /usage          Show token usage for this session
 
-Cost control: Max 20 tool calls/turn, Ctrl-C to cancel, /usage to monitor
+Cost control: hard stop at $0.25/turn, max 20 tool calls/turn, Ctrl-C to cancel
 """
 
 
@@ -74,22 +75,35 @@ def _run_turn(
     on_handle: Any = None,  # noqa: ANN401
 ) -> None:
     """Stream one response and execute any tool calls until Claude stops calling tools."""
+    snap = session.token_snapshot()
     tool_calls_made = 0
     while True:
         tool_uses: list[dict[str, Any]] = []
 
         stream_response(client, session, out, on_tool=tool_uses.append, on_handle=on_handle)
 
-        if session.input_tokens > _INPUT_TOKEN_WARNING_THRESHOLD:
-            out.print_error(
-                f"Warning: {session.input_tokens:,} input tokens used this session"
-                " - potential cost issue"
-            )
-
         if not tool_uses or tool_executor is None:
             break
 
-        tool_results: list[dict[str, Any]] = []
+        window_cost = session.cost_since(snap)
+        if window_cost > _COST_HARD_STOP:
+            out.print_error(
+                f"Cost limit reached: ${window_cost:.4f} this turn"
+                f" (limit ${_COST_HARD_STOP:.2f}) — stopping tool calls"
+            )
+            tool_results: list[dict[str, Any]] = [
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tu["id"],
+                    "content": f"Not executed: cost limit ${_COST_HARD_STOP:.2f} reached",
+                    "is_error": True,
+                }
+                for tu in tool_uses
+            ]
+            session.conversation.append({"role": "user", "content": tool_results})  # type: ignore[typeddict-item]
+            break
+
+        tool_results = []
         limit_reached = False
         for tu in tool_uses:
             if tool_calls_made >= _MAX_TOOL_CALLS_PER_TURN:
@@ -126,6 +140,13 @@ def _run_turn(
                 "content": stored,
                 "is_error": is_error,
             })
+
+            if tool_calls_made % _COST_INJECTION_INTERVAL == 0:
+                cost = session.cost_since(snap)
+                tool_results.append({
+                    "type": "text",
+                    "text": f"Estimated cost this turn: ${cost:.4f}",
+                })
 
         session.conversation.append({"role": "user", "content": tool_results})  # type: ignore[typeddict-item]
         if limit_reached:

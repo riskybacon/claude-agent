@@ -166,20 +166,6 @@ def test_usage_command_shows_token_counts(session: Session) -> None:
     assert any("56" in m for m in out.markdown_calls)
 
 
-def test_high_token_usage_shows_warning(session: Session) -> None:
-    from tests.fakes import FakeStreamHandle
-
-    handle = FakeStreamHandle(tokens=["ok"], input_tokens=110_000)
-    out = FakeOutput()
-    run_loop(
-        FakeInput(["hello", None]),
-        out,
-        FakeStreamingClient(tokens=[], handle=handle),
-        session,
-    )
-    assert any("token" in e.lower() for e in out.errors)
-
-
 def test_newline_after_text_only_response_before_next_prompt(session: Session) -> None:
     out = FakeOutput()
     run_loop(FakeInput(["hello", None]), out, FakeStreamingClient(tokens=["hi there"]), session)

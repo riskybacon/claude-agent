@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from claude_agent.exceptions import FileSystemError
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -29,7 +31,24 @@ class Tool:
 
 def read_file(tool_input: dict[str, Any]) -> str:
     """Return the contents of the file at the given path."""
-    return Path(tool_input["path"]).read_text()
+    path = Path(tool_input["path"])
+    try:
+        return path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        msg = f"File not found: {path}"
+        raise FileSystemError("read_file", msg) from None
+    except PermissionError:
+        msg = f"Permission denied: {path}"
+        raise FileSystemError("read_file", msg) from None
+    except IsADirectoryError:
+        msg = f"Path is a directory, not a file: {path}"
+        raise FileSystemError("read_file", msg) from None
+    except UnicodeDecodeError as e:
+        msg = f"File contains non-UTF-8 content: {path} ({e})"
+        raise FileSystemError("read_file", msg) from None
+    except OSError as e:
+        msg = f"OS error reading {path}: {e}"
+        raise FileSystemError("read_file", msg) from None
 
 
 READ_FILE_TOOL = Tool(

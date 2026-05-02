@@ -43,6 +43,7 @@ ignore = [
     "TD002",    # missing TODO author
     "TD003",    # missing TODO issue link
     "TRY003",   # avoid long messages outside exception class
+    "EM101",    # exception string literal — tool name constants are fine as literals
 ]
 
 [tool.ruff.lint.isort]
