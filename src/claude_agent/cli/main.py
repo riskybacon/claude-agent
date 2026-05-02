@@ -8,12 +8,13 @@ from typing import Any
 
 import anthropic
 
+from claude_agent.cli.cost_tool import make_check_cost_tool
 from claude_agent.cli.input import PromptToolkitInput
 from claude_agent.cli.loop import run_loop
 from claude_agent.cli.output import RichOutput
 from claude_agent.cli.session import Session
 from claude_agent.cli.streaming import AnthropicStream
-from claude_agent.tools import ALL_TOOLS
+from claude_agent.tools import ALL_TOOLS, Tool
 
 _DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
@@ -34,16 +35,16 @@ def _load_claude_md(start: Path) -> tuple[Path, str] | None:
     return None
 
 
-def _build_tools() -> list[dict[str, Any]]:
+def _build_tools(tools: list[Tool]) -> list[dict[str, Any]]:
     return [
         {"name": t.name, "description": t.description, "input_schema": t.input_schema}
-        for t in ALL_TOOLS
+        for t in tools
     ]
 
 
-def _make_executor() -> Any:  # noqa: ANN401
+def _make_executor(tools: list[Tool]) -> Any:  # noqa: ANN401
     def execute(name: str, tool_input: dict[str, Any]) -> tuple[str, bool]:
-        for tool in ALL_TOOLS:
+        for tool in tools:
             if tool.name == name:
                 try:
                     return tool.function(tool_input), False
@@ -70,11 +71,9 @@ def main() -> None:
         claude_md_path, claude_md_content = claude_md
         system_prompt = system_prompt + "\n\n" + claude_md_content
 
-    session = Session(
-        model=args.model,
-        system_prompt=system_prompt,
-        tools=_build_tools(),
-    )
+    session = Session(model=args.model, system_prompt=system_prompt, tools=[])
+    all_tools = [*ALL_TOOLS, make_check_cost_tool(session)]
+    session.tools = _build_tools(all_tools)
 
     client = AnthropicStream(anthropic.Anthropic())
     inp = PromptToolkitInput()
@@ -98,7 +97,11 @@ def main() -> None:
     if claude_md is not None:
         out.print_markdown(f"Using **CLAUDE.md** from `{claude_md_path}`\n")
 
-    run_loop(inp, out, client, session, tool_executor=_make_executor(), on_handle=_store_handle)
+    run_loop(
+        inp, out, client, session,
+        tool_executor=_make_executor(all_tools),
+        on_handle=_store_handle,
+    )
 
     sys.stdout.write("\n")
 
