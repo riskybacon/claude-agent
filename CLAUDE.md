@@ -46,10 +46,14 @@ pytest tests/test_streaming.py   # run one file
 Prefer test-first for all non-trivial changes:
 
 1. Write a failing test that exposes the missing behaviour
-2. Confirm it fails for the right reason
-3. Implement the fix
-4. Confirm it passes
-5. Run the full suite before committing
+2. Run lint on the test (`pixi run lint`) — fix any issues before proceeding
+3. Confirm the test fails for the right reason
+4. Implement the fix
+5. Run lint on the implementation — fix any issues before proceeding
+6. Confirm the test passes
+7. Run the full suite before committing
+
+Keeping lint and behavior steps separate matters: if you fix lint while the test is already red, any accidental behavioral change introduced during cleanup will surface immediately in step 6.
 
 For bug fixes: stash any in-progress changes, write the failing test, pop the stash, fix, confirm green.
 
