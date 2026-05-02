@@ -69,7 +69,11 @@ def _run_turn(
         stream_response(client, session, out, on_tool=tool_uses.append, on_handle=on_handle)
 
         if not tool_uses or tool_executor is None:
+            out.print_newline()
             break
+
+        # Newline after streamed tokens, before tool output
+        out.print_newline()
 
         tool_results: list[dict[str, Any]] = []
         for tu in tool_uses:

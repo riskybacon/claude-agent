@@ -23,6 +23,10 @@ class OutputWriter(Protocol):
         """Print a streaming token fragment."""
         ...
 
+    def print_newline(self) -> None:
+        """Print a newline to separate output sections."""
+        ...
+
     def print_tool_line(self, name: str, args: dict[str, Any], result: str) -> None:
         """Print a collapsed tool-call summary line."""
         ...
