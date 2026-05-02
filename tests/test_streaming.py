@@ -85,3 +85,33 @@ def test_token_usage_accumulates_across_calls(session: Session) -> None:
         stream_response(client, session, FakeOutput())
     assert session.input_tokens == 300
     assert session.output_tokens == 40
+
+
+# --- newline-before-tool-line tests ---
+
+def _kinds(out: FakeOutput) -> list[str]:
+    """Return just the event kind strings from the events log."""
+    return [e[0] for e in out.events]
+
+
+def test_newline_emitted_when_tokens_precede_tool_uses(session: Session) -> None:
+    tool_use = {"name": "read_file", "id": "tu_1", "input": {"path": "foo.py"}}
+    handle = FakeStreamHandle(tokens=["some response"], tool_uses=[tool_use])
+    out = FakeOutput()
+    stream_response(FakeStreamingClient(tokens=[], handle=handle), session, out, on_tool=lambda _: None)
+    assert "newline" in _kinds(out)
+
+
+def test_no_double_newline_when_last_token_ends_with_newline(session: Session) -> None:
+    tool_use = {"name": "read_file", "id": "tu_1", "input": {"path": "foo.py"}}
+    handle = FakeStreamHandle(tokens=["response text\n"], tool_uses=[tool_use])
+    out = FakeOutput()
+    stream_response(FakeStreamingClient(tokens=[], handle=handle), session, out, on_tool=lambda _: None)
+    assert "newline" not in _kinds(out)
+
+
+def test_no_newline_when_no_tool_uses(session: Session) -> None:
+    handle = FakeStreamHandle(tokens=["just a response"])
+    out = FakeOutput()
+    stream_response(FakeStreamingClient(tokens=[], handle=handle), session, out)
+    assert "newline" not in _kinds(out)

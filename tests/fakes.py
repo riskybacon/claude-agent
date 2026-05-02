@@ -36,16 +36,26 @@ class FakeOutput:
         self.spinner_visible: bool = False
         self.spinner_shown_before_first_token: bool = False
         self._first_token_received: bool = False
+        # Ordered log of all output events for interleaving assertions.
+        # Each entry is a tuple whose first element is the event kind:
+        #   ("token", text), ("newline",), ("tool_line", name, args, result)
+        self.events: list[tuple[Any, ...]] = []
 
     def print_token(self, text: str) -> None:
         """Capture a token."""
         self._first_token_received = True
         self.tokens.append(text)
+        self.events.append(("token", text))
+
+    def print_newline(self) -> None:
+        """Capture a newline event."""
+        self.events.append(("newline",))
 
     def print_tool_line(self, name: str, args: dict[str, Any], result: str) -> None:
         """Capture a tool line with byte count."""
         byte_count = len(result.encode())
         self.tool_lines.append(f"▶ {name}({args})  [{byte_count} bytes]")
+        self.events.append(("tool_line", name, args, result))
 
     def print_markdown(self, text: str) -> None:
         """Capture a markdown call."""

@@ -39,6 +39,10 @@ class OutputWriter(Protocol):
         """Print the full result of the most recent tool call."""
         ...
 
+    def print_newline(self) -> None:
+        """Print a bare newline — used to end a streaming response before tool output."""
+        ...
+
     def show_spinner(self) -> None:
         """Show the thinking spinner."""
         ...

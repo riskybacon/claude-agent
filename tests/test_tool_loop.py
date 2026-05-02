@@ -164,6 +164,37 @@ def test_tool_call_limit_prevents_runaway_loops(session: Session) -> None:
     assert any("tool call limit" in error for error in out.errors)
 
 
+def test_newline_appears_between_response_tokens_and_tool_line(session: Session) -> None:
+    """A newline must separate streamed response text from the following tool-call line."""
+    from claude_agent.cli.loop import run_loop
+
+    tool_use = {"name": "read_file", "id": "tu_1", "input": {"path": "foo.py"}}
+    first = FakeStreamHandle(tokens=["I'll read that file"], tool_uses=[tool_use])
+    second = FakeStreamHandle(tokens=["Done!"])
+    client = _SequentialStreamingClient([first, second])
+    out = FakeOutput()
+
+    run_loop(
+        FakeInput(["read foo.py", None]),
+        out,
+        client,
+        session,
+        tool_executor=lambda n, i: ("file contents", False),
+    )
+
+    kinds = [e[0] for e in out.events]
+    assert "tool_line" in kinds, "no tool_line events recorded"
+    first_tool_idx = next(i for i, k in enumerate(kinds) if k == "tool_line")
+    pre_tool_token_indices = [i for i, k in enumerate(kinds) if k == "token" and i < first_tool_idx]
+    assert pre_tool_token_indices, "no tokens recorded before tool_line"
+    last_pre_tool_token_idx = max(pre_tool_token_indices)
+    newline_between = any(
+        k == "newline" and last_pre_tool_token_idx < i < first_tool_idx
+        for i, k in enumerate(kinds)
+    )
+    assert newline_between, f"no newline between last response token and tool_line; events: {kinds}"
+
+
 def test_full_result_still_available_for_expand(session: Session) -> None:
     """session.last_tool_result must hold the full result even when conversation is truncated."""
     from claude_agent.cli.loop import run_loop

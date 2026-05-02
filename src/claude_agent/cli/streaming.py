@@ -97,6 +97,9 @@ def stream_response(
         session.cache_read_tokens += handle.cache_read_tokens
         session.cache_creation_tokens += handle.cache_creation_tokens
 
+        if accumulated and handle.tool_uses and not accumulated[-1].endswith("\n"):
+            out.print_newline()
+
         if not handle.cancelled:
             for tool_use in handle.tool_uses:
                 if on_tool is not None:
