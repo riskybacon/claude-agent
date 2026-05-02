@@ -48,3 +48,12 @@ def test_tool_use_triggers_tool_execution(session: Session) -> None:
     executed: list[dict] = []
     stream_response(client, session, FakeOutput(), on_tool=executed.append)
     assert executed[0]["name"] == "read_file"
+
+
+def test_on_handle_callback_is_called_with_live_handle(session: Session) -> None:
+    handle = FakeStreamHandle(tokens=["hi"])
+    client = FakeStreamingClient(tokens=[], handle=handle)
+    received: list[object] = []
+    stream_response(client, session, FakeOutput(), on_handle=received.append)
+    assert len(received) == 1
+    assert received[0] is handle

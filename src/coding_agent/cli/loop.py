@@ -21,12 +21,13 @@ Available commands:
 """
 
 
-def run_loop(
+def run_loop(  # noqa: PLR0913
     inp: InputReader,
     out: OutputWriter,
     client: StreamingClient,
     session: Session,
     tool_executor: Callable[[str, dict[str, Any]], tuple[str, bool]] | None = None,
+    on_handle: Any = None,  # noqa: ANN401
 ) -> list[str]:
     """Run the main input loop; return a list of user messages forwarded to the agent."""
     forwarded: list[str] = []
@@ -46,7 +47,7 @@ def run_loop(
         session.conversation.append({"role": "user", "content": line})
         forwarded.append(line)
         try:
-            _run_turn(client, session, out, tool_executor)
+            _run_turn(client, session, out, tool_executor, on_handle)
         except Exception as exc:  # noqa: BLE001 — display all API/network errors, don't crash
             session.conversation.pop()
             forwarded.pop()
@@ -60,11 +61,12 @@ def _run_turn(
     session: Session,
     out: OutputWriter,
     tool_executor: Callable[[str, dict[str, Any]], tuple[str, bool]] | None,
+    on_handle: Any = None,  # noqa: ANN401
 ) -> None:
     """Stream one response and execute any tool calls until Claude stops calling tools."""
     while True:
         tool_uses: list[dict[str, Any]] = []
-        stream_response(client, session, out, on_tool=tool_uses.append)
+        stream_response(client, session, out, on_tool=tool_uses.append, on_handle=on_handle)
 
         if not tool_uses or tool_executor is None:
             break

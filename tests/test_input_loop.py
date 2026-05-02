@@ -108,6 +108,20 @@ def test_failed_turn_does_not_corrupt_conversation(session: Session) -> None:
 
 # --- slash command UX ---
 
+def test_run_loop_threads_on_handle_to_stream_response(session: Session) -> None:
+    """on_handle passed to run_loop must reach the live stream handle."""
+    from tests.fakes import FakeStreamHandle
+
+    handle = FakeStreamHandle(tokens=["answer"])
+    client = FakeStreamingClient(tokens=[], handle=handle)
+    received: list[object] = []
+
+    run_loop(FakeInput(["hello", None]), FakeOutput(), client, session, on_handle=received.append)
+
+    assert len(received) == 1
+    assert received[0] is handle
+
+
 def test_model_command_without_arg_shows_usage_error(session: Session) -> None:
     out = FakeOutput()
     run_loop(FakeInput(["/model", None]), out, FakeStreamingClient(tokens=[]), session)

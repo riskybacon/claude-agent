@@ -1,6 +1,7 @@
 """CLI entry point — wires real implementations and runs the input loop."""
 
 import argparse
+import signal
 import sys
 from pathlib import Path
 from typing import Any
@@ -65,9 +66,20 @@ def main() -> None:
     inp = PromptToolkitInput()
     out = RichOutput(verbose=args.verbose)
 
+    active_handle: list[Any] = [None]
+
+    def _on_sigint(signum: int, frame: object) -> None:  # noqa: ARG001
+        if active_handle[0] is not None:
+            active_handle[0].cancel()
+
+    signal.signal(signal.SIGINT, _on_sigint)
+
+    def _store_handle(h: Any) -> None:  # noqa: ANN401
+        active_handle[0] = h
+
     out.print_markdown("**coding-agent** — type `/help` for commands, Ctrl+D to exit\n")
 
-    run_loop(inp, out, client, session, tool_executor=_make_executor())
+    run_loop(inp, out, client, session, tool_executor=_make_executor(), on_handle=_store_handle)
 
     sys.stdout.write("\n")
 

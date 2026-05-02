@@ -26,6 +26,24 @@ def test_tool_not_executed_after_cancellation() -> None:
     assert executed == []
 
 
+def test_cancellation_via_on_handle_suppresses_tool_calls() -> None:
+    """Simulates the signal handler pattern: on_handle stores handle, cancel() is called."""
+    tool_use = {"name": "bash", "id": "tu_1", "input": {"command": "ls"}}
+    handle = FakeStreamHandle(tokens=["partial"], tool_uses=[tool_use])
+    client = FakeStreamingClient(tokens=[], handle=handle)
+    executed: list[dict] = []
+
+    stream_response(
+        client,
+        _make_session(),
+        FakeOutput(),
+        on_tool=executed.append,
+        on_handle=lambda h: h.cancel(),
+    )
+
+    assert executed == []
+
+
 def test_loop_continues_after_cancellation() -> None:
     from coding_agent.cli.loop import run_loop
 

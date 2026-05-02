@@ -50,6 +50,7 @@ def stream_response(
     session: Session,
     out: OutputWriter,
     on_tool: Any = None,  # noqa: ANN401
+    on_handle: Any = None,  # noqa: ANN401
 ) -> None:
     """Stream one inference turn: spinner → tokens → assistant message → tool calls."""
     out.show_spinner()
@@ -62,6 +63,9 @@ def stream_response(
         messages=_trim_to_turns(session.conversation, _MAX_CONVERSATION_TURNS),
     ) as raw_handle:
         handle: _StreamData = raw_handle  # type: ignore[assignment]
+
+        if on_handle is not None:
+            on_handle(handle)
 
         for token in handle.tokens:
             out.hide_spinner()
