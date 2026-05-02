@@ -12,6 +12,27 @@ if TYPE_CHECKING:
     import anthropic
 
 
+_MAX_CONVERSATION_TURNS = 20
+
+
+def _is_turn_start(msg: dict[str, Any]) -> bool:
+    """Return True if msg is a user text message (not a tool_result)."""
+    return msg["role"] == "user" and isinstance(msg["content"], str)
+
+
+def _trim_to_turns(conversation: list[Any], max_turns: int) -> list[Any]:
+    """Return a view of conversation containing only the last max_turns turns.
+
+    A turn starts at each user message with plain string content. Tool_result
+    messages (user role, list content) are part of the preceding turn and are
+    never counted as a boundary, ensuring tool_use/tool_result pairs stay together.
+    """
+    turn_starts = [i for i, m in enumerate(conversation) if _is_turn_start(m)]
+    if len(turn_starts) <= max_turns:
+        return conversation
+    return conversation[turn_starts[-max_turns]:]
+
+
 class _StreamData(Protocol):
     """Extended handle exposing token/tool data alongside the cancel control."""
 
@@ -38,7 +59,7 @@ def stream_response(
         model=session.model,
         system=session.system_prompt,
         tools=session.tools,
-        messages=session.conversation,
+        messages=_trim_to_turns(session.conversation, _MAX_CONVERSATION_TURNS),
     ) as raw_handle:
         handle: _StreamData = raw_handle  # type: ignore[assignment]
 
