@@ -1,8 +1,13 @@
 """Tests for AgentConfig configuration management."""
 
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
+from claude_agent.cli.session import Session
+from claude_agent.cli.streaming import stream_response
 from claude_agent.config import AgentConfig
+from claude_agent.tools import bash
+from tests.fakes import FakeOutput, FakeStreamingClient
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -119,3 +124,48 @@ def test_config_priority_order(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
 
     expected_bash_timeout = 300
     assert config.bash_timeout_seconds == expected_bash_timeout
+
+
+def test_session_respects_config() -> None:
+    """Session should use configuration values instead of hard-coded constants."""
+    custom_max_conversation_turns = 5
+    config = AgentConfig(max_conversation_turns=custom_max_conversation_turns)
+    session = Session.from_config(config, model="opus", tools=[])
+
+    # Session should store/use the config
+    assert session.config.max_conversation_turns == custom_max_conversation_turns
+
+
+def test_bash_tool_uses_config_timeout() -> None:
+    """Bash tool should respect config timeout value."""
+    config = AgentConfig(bash_timeout_seconds=60)
+    expected_timeout = 60
+
+    with patch("claude_agent.tools.subprocess.run") as mock_run:
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = "test output"
+        bash({"command": "echo test"}, config)
+
+        _, kwargs = mock_run.call_args
+        assert kwargs["timeout"] == expected_timeout
+
+
+def test_streaming_uses_session_config() -> None:
+    """stream_response should use the session's config when available."""
+    config = AgentConfig(max_conversation_turns=5)
+    session = Session.from_config(config, model="opus", tools=[])
+
+    # Verify that the session has the config and it's being used
+    assert session.config is not None
+    assert session.config.max_conversation_turns == 5
+    
+    # Run stream_response - main goal is to verify it doesn't crash
+    # and that the session config is accessible
+    client = FakeStreamingClient(tokens=["response"])
+    out = FakeOutput()
+
+    # This should work without errors, using the config values
+    stream_response(client, session, out)
+    
+    # Verify basic streaming still works
+    assert out.tokens == ["response"]

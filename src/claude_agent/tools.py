@@ -11,6 +11,8 @@ from claude_agent.exceptions import FileSystemError
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from claude_agent.config import AgentConfig
+
 _MAX_SEARCH_MATCHES = 50
 _SKIP_DIRS = {".git", ".pixi", "__pycache__", ".mypy_cache", ".ruff_cache"}
 
@@ -122,12 +124,13 @@ LIST_FILES_TOOL = Tool(
 _BASH_TIMEOUT_SECONDS = 120
 
 
-def bash(tool_input: dict[str, Any]) -> str:
+def bash(tool_input: dict[str, Any], config: AgentConfig | None = None) -> str:
     """Run a bash command and return its output (stdout + stderr combined).
 
     Command failures are returned as output rather than raised as exceptions
     so Claude can read the error and decide how to proceed.
     """
+    timeout_seconds = config.bash_timeout_seconds if config else _BASH_TIMEOUT_SECONDS
     try:
         result = subprocess.run(  # noqa: S603
             ["bash", "-c", tool_input["command"]],  # noqa: S607
@@ -135,10 +138,10 @@ def bash(tool_input: dict[str, Any]) -> str:
             stderr=subprocess.STDOUT,
             text=True,
             check=False,
-            timeout=_BASH_TIMEOUT_SECONDS,
+            timeout=timeout_seconds,
         )
     except subprocess.TimeoutExpired:
-        return f"Command timed out after {_BASH_TIMEOUT_SECONDS} seconds"
+        return f"Command timed out after {timeout_seconds} seconds"
     if result.returncode != 0:
         return f"Command failed (exit {result.returncode}):\n{result.stdout.strip()}"
     return result.stdout.strip()

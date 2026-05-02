@@ -8,6 +8,8 @@ from claude_agent.cli.pricing import estimate_cost
 if TYPE_CHECKING:
     import anthropic
 
+    from claude_agent.config import AgentConfig
+
 
 @dataclass(frozen=True)
 class TokenSnapshot:
@@ -27,11 +29,13 @@ class Session:
         model: str,
         system_prompt: str,
         tools: list[dict[str, Any]],
+        config: AgentConfig | None = None,
     ) -> None:
         """Initialise the session with a model, system prompt, and tool list."""
         self.model = model
         self.system_prompt = system_prompt
         self.tools = tools
+        self.config = config
         self.conversation: list[anthropic.types.MessageParam] = []
         self.last_tool_result: str | None = None
         self.input_tokens = 0
@@ -62,6 +66,16 @@ class Session:
             cache_read_tokens=self.cache_read_tokens,
             cache_creation_tokens=self.cache_creation_tokens,
         )
+
+    @classmethod
+    def from_config(
+        cls,
+        config: AgentConfig,
+        model: str,
+        tools: list[dict[str, Any]],
+    ) -> Session:
+        """Create a Session from an AgentConfig."""
+        return cls(model, config.system_prompt, tools, config)
 
     def cost_since(self, snapshot: TokenSnapshot) -> float:
         """Return the estimated cost in USD of tokens accumulated since snapshot."""

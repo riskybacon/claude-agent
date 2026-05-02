@@ -64,7 +64,10 @@ def stream_response(
         model=session.model,
         system=session.system_prompt,
         tools=session.tools,
-        messages=_trim_to_turns(session.conversation, _MAX_CONVERSATION_TURNS),
+        messages=_trim_to_turns(
+            session.conversation,
+            session.config.max_conversation_turns if session.config else _MAX_CONVERSATION_TURNS
+        ),
         on_handle=on_handle,
     ) as raw_handle:
         handle: _StreamData = raw_handle  # type: ignore[assignment]
