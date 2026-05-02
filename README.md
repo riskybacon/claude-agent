@@ -28,9 +28,9 @@ pixi run chat -- --verbose
 This agent includes several safeguards to prevent runaway costs:
 
 - **Tool call limits**: Max 20 tool calls per turn to prevent infinite loops
-- **Usage tracking**: Use `/usage` to see API/tool call counts
+- **Usage tracking**: Use `/usage` to see input/output/cache token counts
 - **Enhanced Ctrl-C**: Cancellation works during tool execution
-- **Warnings**: Alerts when >10 API calls in one session
+- **Warnings**: Alerts when >100k input tokens used in a session
 
 See [docs/token-efficiency.md](docs/token-efficiency.md) for details.
 

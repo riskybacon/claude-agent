@@ -79,11 +79,19 @@ class FakeStreamHandle:
         tool_uses: list[dict[str, Any]] | None = None,
         *,
         cancelled: bool = False,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        cache_read_tokens: int = 0,
+        cache_creation_tokens: int = 0,
     ) -> None:
-        """Initialise with optional tokens, tool uses, and cancelled state."""
+        """Initialise with optional tokens, tool uses, cancelled state, and usage counts."""
         self.tokens: list[str] = tokens if tokens is not None else []
         self.tool_uses: list[dict[str, Any]] = tool_uses if tool_uses is not None else []
         self.cancelled: bool = cancelled
+        self.input_tokens = input_tokens
+        self.output_tokens = output_tokens
+        self.cache_read_tokens = cache_read_tokens
+        self.cache_creation_tokens = cache_creation_tokens
 
     def cancel(self) -> None:
         """Mark the stream as cancelled."""

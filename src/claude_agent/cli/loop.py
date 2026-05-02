@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 _MAX_TOOL_RESULT_IN_HISTORY = 1000
 _MAX_TOOL_CALLS_PER_TURN = 20
-_API_CALL_WARNING_THRESHOLD = 10
+_INPUT_TOKEN_WARNING_THRESHOLD = 100_000
 
 _HELP_TEXT = """\
 Available commands:
@@ -20,7 +20,7 @@ Available commands:
   /clear          Reset conversation history
   /model <name>   Switch the active model
   /expand         Print the full output of the most recent tool call
-  /usage          Show API and tool call usage for this session
+  /usage          Show token usage for this session
 
 Cost control: Max 20 tool calls/turn, Ctrl-C to cancel, /usage to monitor
 """
@@ -77,15 +77,14 @@ def _run_turn(
     tool_calls_made = 0
     while True:
         tool_uses: list[dict[str, Any]] = []
-        session.api_calls_made += 1
-
-        if session.api_calls_made > _API_CALL_WARNING_THRESHOLD:
-            out.print_error(
-                f"Warning: {session.api_calls_made} API calls made this session"
-                " - potential cost issue"
-            )
 
         stream_response(client, session, out, on_tool=tool_uses.append, on_handle=on_handle)
+
+        if session.input_tokens > _INPUT_TOKEN_WARNING_THRESHOLD:
+            out.print_error(
+                f"Warning: {session.input_tokens:,} input tokens used this session"
+                " - potential cost issue"
+            )
 
         if not tool_uses or tool_executor is None:
             break
@@ -138,7 +137,11 @@ def _dispatch(name: str, args: list[str], session: Session, out: OutputWriter) -
             out.print_error("No tool result to expand")
     elif name == "usage":
         out.print_markdown(
-            f"**Session Usage:**\n- API calls: {session.api_calls_made}"
+            f"**Session Usage:**"
+            f"\n- Input tokens: {session.input_tokens:,}"
+            f"\n- Output tokens: {session.output_tokens:,}"
+            f"\n- Cache read tokens: {session.cache_read_tokens:,}"
+            f"\n- Cache creation tokens: {session.cache_creation_tokens:,}"
             f"\n- Tool calls: {session.tool_calls_made}"
         )
     elif name == "help":

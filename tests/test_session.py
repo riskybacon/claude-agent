@@ -46,3 +46,24 @@ def test_last_tool_result_stored() -> None:
 
 def test_last_tool_result_none_on_init() -> None:
     assert _make_session().last_tool_result is None
+
+
+def test_token_counts_zero_on_init() -> None:
+    s = _make_session()
+    assert s.input_tokens == 0
+    assert s.output_tokens == 0
+    assert s.cache_read_tokens == 0
+    assert s.cache_creation_tokens == 0
+
+
+def test_clear_resets_token_counts() -> None:
+    s = _make_session()
+    s.input_tokens = 500
+    s.output_tokens = 100
+    s.cache_read_tokens = 200
+    s.cache_creation_tokens = 50
+    s.clear()
+    assert s.input_tokens == 0
+    assert s.output_tokens == 0
+    assert s.cache_read_tokens == 0
+    assert s.cache_creation_tokens == 0

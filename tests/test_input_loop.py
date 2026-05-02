@@ -153,3 +153,28 @@ def test_model_switch_gives_feedback(session: Session) -> None:
     run_loop(FakeInput(["/model haiku", None]), out, FakeStreamingClient(tokens=[]), session)
     assert session.model == "haiku"
     assert any("haiku" in m.lower() for m in out.markdown_calls)
+
+
+def test_usage_command_shows_token_counts(session: Session) -> None:
+    from tests.fakes import FakeStreamHandle
+
+    session.input_tokens = 1234
+    session.output_tokens = 56
+    out = FakeOutput()
+    run_loop(FakeInput(["/usage", None]), out, FakeStreamingClient(tokens=[]), session)
+    assert any("1,234" in m for m in out.markdown_calls)
+    assert any("56" in m for m in out.markdown_calls)
+
+
+def test_high_token_usage_shows_warning(session: Session) -> None:
+    from tests.fakes import FakeStreamHandle
+
+    handle = FakeStreamHandle(tokens=["ok"], input_tokens=110_000)
+    out = FakeOutput()
+    run_loop(
+        FakeInput(["hello", None]),
+        out,
+        FakeStreamingClient(tokens=[], handle=handle),
+        session,
+    )
+    assert any("token" in e.lower() for e in out.errors)

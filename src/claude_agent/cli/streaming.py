@@ -39,6 +39,10 @@ class _StreamData(Protocol):
     tokens: list[str]
     tool_uses: list[dict[str, Any]]
     cancelled: bool
+    input_tokens: int
+    output_tokens: int
+    cache_read_tokens: int
+    cache_creation_tokens: int
 
     def cancel(self) -> None:
         """Cancel the stream."""
@@ -88,6 +92,11 @@ def stream_response(
             if content:
                 session.conversation.append({"role": "assistant", "content": content})
 
+        session.input_tokens += handle.input_tokens
+        session.output_tokens += handle.output_tokens
+        session.cache_read_tokens += handle.cache_read_tokens
+        session.cache_creation_tokens += handle.cache_creation_tokens
+
         if not handle.cancelled:
             for tool_use in handle.tool_uses:
                 if on_tool is not None:
@@ -103,6 +112,10 @@ class _AnthropicStreamHandle:
         self.tool_uses: list[dict[str, Any]] = []
         self.cancelled: bool = False
         self.final_content: list[Any] = []
+        self.input_tokens: int = 0
+        self.output_tokens: int = 0
+        self.cache_read_tokens: int = 0
+        self.cache_creation_tokens: int = 0
 
     def cancel(self) -> None:
         """Request cancellation of the active stream."""
@@ -154,6 +167,12 @@ class AnthropicStream:
             if not handle.cancelled:
                 final = sdk_stream.get_final_message()
                 handle.final_content = list(final.content)  # type: ignore[assignment]
+                handle.input_tokens = final.usage.input_tokens
+                handle.output_tokens = final.usage.output_tokens
+                handle.cache_read_tokens = getattr(final.usage, "cache_read_input_tokens", 0) or 0
+                handle.cache_creation_tokens = (
+                    getattr(final.usage, "cache_creation_input_tokens", 0) or 0
+                )
                 for block in final.content:
                     if block.type == "tool_use":
                         handle.tool_uses.append({

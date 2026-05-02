@@ -59,3 +59,29 @@ def test_on_handle_callback_is_called_with_live_handle(session: Session) -> None
     stream_response(client, session, FakeOutput(), on_handle=received.append)
     assert len(received) == 1
     assert received[0] is handle
+
+
+def test_token_usage_accumulated_into_session(session: Session) -> None:
+    handle = FakeStreamHandle(
+        tokens=["hi"],
+        input_tokens=100,
+        output_tokens=20,
+        cache_read_tokens=50,
+        cache_creation_tokens=10,
+    )
+    client = FakeStreamingClient(tokens=[], handle=handle)
+    stream_response(client, session, FakeOutput())
+    assert session.input_tokens == 100
+    assert session.output_tokens == 20
+    assert session.cache_read_tokens == 50
+    assert session.cache_creation_tokens == 10
+
+
+def test_token_usage_accumulates_across_calls(session: Session) -> None:
+    handle1 = FakeStreamHandle(tokens=["a"], input_tokens=100, output_tokens=10)
+    handle2 = FakeStreamHandle(tokens=["b"], input_tokens=200, output_tokens=30)
+    for handle in [handle1, handle2]:
+        client = FakeStreamingClient(tokens=[], handle=handle)
+        stream_response(client, session, FakeOutput())
+    assert session.input_tokens == 300
+    assert session.output_tokens == 40

@@ -21,14 +21,20 @@ class Session:
         self.tools = tools
         self.conversation: list[anthropic.types.MessageParam] = []
         self.last_tool_result: str | None = None
-        self.api_calls_made = 0
+        self.input_tokens = 0
+        self.output_tokens = 0
+        self.cache_read_tokens = 0
+        self.cache_creation_tokens = 0
         self.tool_calls_made = 0
 
     def clear(self) -> None:
         """Reset conversation history; keep model and system prompt."""
         self.conversation = []
         self.last_tool_result = None
-        self.api_calls_made = 0
+        self.input_tokens = 0
+        self.output_tokens = 0
+        self.cache_read_tokens = 0
+        self.cache_creation_tokens = 0
         self.tool_calls_made = 0
 
     def switch_model(self, model: str) -> None:
