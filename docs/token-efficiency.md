@@ -158,10 +158,70 @@ messages=_trim_to_turns(session.conversation, max_turns=20)
 
 ---
 
+## Method 4 — Cost Mitigation & Runaway Prevention
+
+**Status:** Implemented in `src/coding_agent/cli/loop.py` and `src/coding_agent/cli/session.py`.
+
+Even with token efficiency measures, coding agents can still generate runaway costs through:
+- Infinite tool loops (agent keeps calling tools without progress)  
+- User getting stuck in debugging spirals
+- Ctrl-C not working during tool execution
+
+### Tool Call Limits
+
+**Constant:** `_MAX_TOOL_CALLS_PER_TURN = 20`
+
+Prevents infinite tool loops by stopping execution after 20 tool calls in a single turn:
+
+```python
+if tool_calls_made >= _MAX_TOOL_CALLS_PER_TURN:
+    out.print_error(f"Hit tool call limit ({_MAX_TOOL_CALLS_PER_TURN}) - stopping to prevent runaway costs")
+    break
+```
+
+### Session Usage Tracking  
+
+Track API and tool calls per session:
+
+```python
+session.api_calls_made += 1
+session.tool_calls_made += 1
+```
+
+- **Warning system**: Alerts when >10 API calls in one session
+- **Usage command**: `/usage` shows current session statistics  
+- **Clear command**: `/clear` resets usage counters along with conversation
+
+### Enhanced Cancellation
+
+Added `KeyboardInterrupt` handling in tool execution loop:
+
+```python
+try:
+    result, is_error = tool_executor(tu["name"], tu["input"])
+    # ...
+except KeyboardInterrupt:
+    out.print_error("Tool execution cancelled") 
+    return
+```
+
+**Why needed:** The original signal handler only cancels streaming, but tool execution happens after streaming completes.
+
+### Additional Safeguards (Not Implemented)
+
+For even stricter cost control, consider:
+- **Time limits**: Stop turns after N minutes
+- **Token estimation**: Rough cost calculation with user confirmation
+- **Daily/session spending caps**: Hard limits with persistence  
+- **User confirmation**: Prompt before expensive operations
+
+---
+
 ## Summary
 
 | Method | Where | Status | Best for |
 |--------|-------|--------|----------|
 | Truncate tool results | `loop.py` `_run_turn` | Done | File-heavy sessions |
-| Prompt caching | `streaming.py` `AnthropicStream` | Done | All sessions |
+| Prompt caching | `streaming.py` `AnthropicStream` | Done | All sessions |  
 | Sliding window | `streaming.py` `stream_response` | Not implemented | Very long sessions (50+ turns) |
+| Cost mitigation | `loop.py` `session.py` | **Done** | **Preventing runaway costs** |

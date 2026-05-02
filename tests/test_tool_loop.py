@@ -27,8 +27,12 @@ class _SequentialStreamingClient:
         system: str,  # noqa: ARG002
         tools: list[dict[str, Any]],  # noqa: ARG002
         messages: list[Any],  # noqa: ARG002
+        on_handle: Any = None,  # noqa: ANN401
     ) -> Any:  # noqa: ANN202
-        yield self._handles.pop(0) if self._handles else FakeStreamHandle()
+        handle = self._handles.pop(0) if self._handles else FakeStreamHandle()
+        if on_handle is not None:
+            on_handle(handle)
+        yield handle
 
 
 @pytest.fixture()
@@ -132,6 +136,32 @@ def test_small_tool_result_is_stored_in_full(session: Session) -> None:
     assert isinstance(content, list)
     stored = content[0]["content"]  # type: ignore[index]
     assert stored == small_result
+
+
+def test_tool_call_limit_prevents_runaway_loops(session: Session) -> None:
+    """Tool call limits should prevent infinite loops and runaway costs."""
+    from coding_agent.cli.loop import run_loop, _MAX_TOOL_CALLS_PER_TURN
+
+    # Create a stream that keeps generating tool calls
+    many_tools = [{"name": "bash", "id": f"tu_{i}", "input": {"command": "echo hi"}} 
+                  for i in range(_MAX_TOOL_CALLS_PER_TURN + 5)]
+    
+    first = FakeStreamHandle(tokens=["Starting..."], tool_uses=many_tools)
+    client = _SequentialStreamingClient([first])
+    out = FakeOutput()
+
+    run_loop(
+        FakeInput(["cause chaos", None]),
+        out,
+        client,
+        session,
+        tool_executor=lambda n, i: ("output", False),
+    )
+
+    # Should have stopped at the limit, not executed all tools
+    assert len(out.tool_lines) == _MAX_TOOL_CALLS_PER_TURN
+    assert len(out.errors) >= 1
+    assert any("tool call limit" in error for error in out.errors)
 
 
 def test_full_result_still_available_for_expand(session: Session) -> None:

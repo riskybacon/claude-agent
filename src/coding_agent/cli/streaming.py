@@ -61,11 +61,9 @@ def stream_response(
         system=session.system_prompt,
         tools=session.tools,
         messages=_trim_to_turns(session.conversation, _MAX_CONVERSATION_TURNS),
+        on_handle=on_handle,
     ) as raw_handle:
         handle: _StreamData = raw_handle  # type: ignore[assignment]
-
-        if on_handle is not None:
-            on_handle(handle)
 
         for token in handle.tokens:
             out.hide_spinner()
@@ -125,6 +123,7 @@ class AnthropicStream:
         system: str,
         tools: list[dict[str, Any]],
         messages: list[anthropic.types.MessageParam],
+        on_handle: Any = None,  # noqa: ANN401
     ) -> Generator[_AnthropicStreamHandle]:
         """Collect tokens and tool uses, then yield the populated handle."""
         handle = _AnthropicStreamHandle()
@@ -145,6 +144,8 @@ class AnthropicStream:
             tools=cached_tools,  # type: ignore[arg-type]
             messages=messages,
         ) as sdk_stream:
+            if on_handle is not None:
+                on_handle(handle)
             for text_chunk in sdk_stream.text_stream:
                 if handle.cancelled:
                     break

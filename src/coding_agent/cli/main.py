@@ -85,6 +85,9 @@ def main() -> None:
     def _on_sigint(signum: int, frame: object) -> None:  # noqa: ARG001
         if active_handle[0] is not None:
             active_handle[0].cancel()
+        # Must raise — PEP 475 retries blocked syscalls when the handler returns normally,
+        # so a handler that only sets a flag appears to do nothing until the next chunk arrives.
+        raise KeyboardInterrupt
 
     signal.signal(signal.SIGINT, _on_sigint)
 

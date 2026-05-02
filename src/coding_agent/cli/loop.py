@@ -11,6 +11,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 _MAX_TOOL_RESULT_IN_HISTORY = 1000
+_MAX_TOOL_CALLS_PER_TURN = 20
+_API_CALL_WARNING_THRESHOLD = 10
 
 _HELP_TEXT = """\
 Available commands:
@@ -18,6 +20,9 @@ Available commands:
   /clear          Reset conversation history
   /model <name>   Switch the active model
   /expand         Print the full output of the most recent tool call
+  /usage          Show API and tool call usage for this session
+
+Cost control: Max 20 tool calls/turn, Ctrl-C to cancel, /usage to monitor
 """
 
 
@@ -44,10 +49,15 @@ def run_loop(  # noqa: PLR0913
             _dispatch(cmd.name, cmd.args, session, out)
             continue
 
+        conv_len = len(session.conversation)
         session.conversation.append({"role": "user", "content": line})
         forwarded.append(line)
         try:
             _run_turn(client, session, out, tool_executor, on_handle)
+        except KeyboardInterrupt:
+            del session.conversation[conv_len:]
+            forwarded.pop()
+            out.print_markdown("\n*(cancelled)*")
         except Exception as exc:  # noqa: BLE001 — display all API/network errors, don't crash
             session.conversation.pop()
             forwarded.pop()
@@ -64,8 +74,17 @@ def _run_turn(
     on_handle: Any = None,  # noqa: ANN401
 ) -> None:
     """Stream one response and execute any tool calls until Claude stops calling tools."""
+    tool_calls_made = 0
     while True:
         tool_uses: list[dict[str, Any]] = []
+        session.api_calls_made += 1
+
+        if session.api_calls_made > _API_CALL_WARNING_THRESHOLD:
+            out.print_error(
+                f"Warning: {session.api_calls_made} API calls made this session"
+                " - potential cost issue"
+            )
+
         stream_response(client, session, out, on_tool=tool_uses.append, on_handle=on_handle)
 
         if not tool_uses or tool_executor is None:
@@ -73,6 +92,16 @@ def _run_turn(
 
         tool_results: list[dict[str, Any]] = []
         for tu in tool_uses:
+            if tool_calls_made >= _MAX_TOOL_CALLS_PER_TURN:
+                out.print_error(
+                    f"Hit tool call limit ({_MAX_TOOL_CALLS_PER_TURN})"
+                    " - stopping to prevent runaway costs"
+                )
+                break
+
+            tool_calls_made += 1
+            session.tool_calls_made += 1
+
             result, is_error = tool_executor(tu["name"], tu["input"])
             session.last_tool_result = result
             out.print_tool_line(tu["name"], tu["input"], result)
@@ -107,6 +136,11 @@ def _dispatch(name: str, args: list[str], session: Session, out: OutputWriter) -
             out.print_expand(session.last_tool_result)
         else:
             out.print_error("No tool result to expand")
+    elif name == "usage":
+        out.print_markdown(
+            f"**Session Usage:**\n- API calls: {session.api_calls_made}"
+            f"\n- Tool calls: {session.tool_calls_made}"
+        )
     elif name == "help":
         out.print_markdown(_HELP_TEXT)
     else:

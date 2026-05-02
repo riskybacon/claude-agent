@@ -23,6 +23,7 @@ class _RaisingClient:
         system: str,  # noqa: ARG002
         tools: list[dict[str, Any]],  # noqa: ARG002
         messages: list[Any],  # noqa: ARG002
+        on_handle: Any = None,  # noqa: ANN401, ARG002
     ) -> Any:
         raise self._exc
         yield  # type: ignore[unreachable]  # makes this a generator so @contextmanager works
@@ -92,13 +93,16 @@ def test_loop_continues_after_api_error(session: Session) -> None:
             self._calls = 0
 
         @contextmanager
-        def stream(self, model: str, system: str, tools: Any, messages: Any) -> Any:  # noqa: ANN202
+        def stream(self, model: str, system: str, tools: Any, messages: Any, on_handle: Any = None) -> Any:  # noqa: ANN202
             self._calls += 1
             if self._calls == 1:
                 raise RuntimeError("rate limit")
                 yield  # type: ignore[unreachable]
             else:
-                yield FakeStreamHandle(tokens=["hi"])
+                handle = FakeStreamHandle(tokens=["hi"])
+                if on_handle is not None:
+                    on_handle(handle)
+                yield handle
 
     run_loop(inp, out, _MixedClient(), session)
     assert any("rate limit" in e for e in out.errors)

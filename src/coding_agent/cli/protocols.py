@@ -65,6 +65,7 @@ class StreamingClient(Protocol):
         system: str,
         tools: list[dict[str, Any]],
         messages: list[anthropic.types.MessageParam],
+        on_handle: Any = None,  # noqa: ANN401
     ) -> AbstractContextManager[StreamHandle]:
         """Return a context manager that streams tokens and yields a StreamHandle."""
         ...

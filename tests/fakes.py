@@ -111,12 +111,13 @@ class FakeStreamingClient:
         system: str,  # noqa: ARG002
         tools: list[dict[str, Any]],  # noqa: ARG002
         messages: list[anthropic.types.MessageParam],  # noqa: ARG002
+        on_handle: Any = None,  # noqa: ANN401
     ) -> Generator[FakeStreamHandle]:
         """Yield a FakeStreamHandle pre-populated with configured tokens and tool uses."""
-        if self._handle is not None:
-            yield self._handle
-        else:
-            yield FakeStreamHandle(
-                tokens=list(self._tokens),
-                tool_uses=list(self._tool_uses),
-            )
+        handle = self._handle if self._handle is not None else FakeStreamHandle(
+            tokens=list(self._tokens),
+            tool_uses=list(self._tool_uses),
+        )
+        if on_handle is not None:
+            on_handle(handle)
+        yield handle
