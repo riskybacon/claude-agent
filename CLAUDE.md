@@ -43,7 +43,7 @@ pytest tests/test_streaming.py   # run one file
 
 ## TDD Workflow
 
-Prefer test-first for all non-trivial changes:
+**Required: Use test-first for all non-trivial changes:**
 
 1. Write a failing test that exposes the missing behaviour
 2. Run lint on the test (`pixi run lint`) — fix any issues before proceeding
