@@ -104,11 +104,20 @@ class AnthropicStream:
         """Collect tokens and tool uses, then yield the populated handle."""
         handle = _AnthropicStreamHandle()
 
+        cached_system: list[dict[str, Any]] = [
+            {"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}
+        ]
+        cached_tools: list[dict[str, Any]] = (
+            [*tools[:-1], {**tools[-1], "cache_control": {"type": "ephemeral"}}]
+            if tools
+            else []
+        )
+
         with self._client.messages.stream(
             model=model,
             max_tokens=8096,
-            system=system,
-            tools=tools,  # type: ignore[arg-type]
+            system=cached_system,  # type: ignore[arg-type]
+            tools=cached_tools,  # type: ignore[arg-type]
             messages=messages,
         ) as sdk_stream:
             for text_chunk in sdk_stream.text_stream:
