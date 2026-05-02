@@ -134,3 +134,12 @@ def test_empty_tool_list_has_no_cache_control() -> None:
     stream_response(AnthropicStream(mock_client), session, FakeOutput())
 
     assert captured[0]["tools"] == []
+
+
+def test_max_tokens_is_8192() -> None:
+    sdk_stream = _make_sdk_stream(text_chunks=[])
+    mock_client, captured = _make_anthropic_client(sdk_stream)
+
+    stream_response(AnthropicStream(mock_client), _make_session(), FakeOutput())
+
+    assert captured[0]["max_tokens"] == 8192

@@ -94,8 +94,12 @@ def _dispatch(name: str, args: list[str], session: Session, out: OutputWriter) -
     """Execute a slash command."""
     if name == "clear":
         session.clear()
+        out.print_markdown("Conversation cleared.")
     elif name == "model" and args:
         session.switch_model(args[0])
+        out.print_markdown(f"Model switched to **{args[0]}**.")
+    elif name == "model":
+        out.print_error("Usage: /model <name>")
     elif name == "expand":
         if session.last_tool_result is not None:
             out.print_expand(session.last_tool_result)

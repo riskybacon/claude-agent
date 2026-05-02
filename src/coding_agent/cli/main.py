@@ -1,7 +1,6 @@
 """CLI entry point — wires real implementations and runs the input loop."""
 
 import argparse
-import signal
 import sys
 from pathlib import Path
 from typing import Any
@@ -65,14 +64,6 @@ def main() -> None:
     client = AnthropicStream(anthropic.Anthropic())
     inp = PromptToolkitInput()
     out = RichOutput(verbose=args.verbose)
-
-    active_handle: list[Any] = [None]
-
-    def _on_sigint(signum: int, frame: object) -> None:  # noqa: ARG001
-        if active_handle[0] is not None:
-            active_handle[0].cancel()
-
-    signal.signal(signal.SIGINT, _on_sigint)
 
     out.print_markdown("**coding-agent** — type `/help` for commands, Ctrl+D to exit\n")
 

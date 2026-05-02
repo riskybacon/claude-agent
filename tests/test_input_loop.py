@@ -104,3 +104,28 @@ def test_failed_turn_does_not_corrupt_conversation(session: Session) -> None:
     run_loop(FakeInput(["hello", None]), FakeOutput(), client, session)
     # The user message must be removed — no orphaned turn without an assistant reply
     assert session.conversation == []
+
+
+# --- slash command UX ---
+
+def test_model_command_without_arg_shows_usage_error(session: Session) -> None:
+    out = FakeOutput()
+    run_loop(FakeInput(["/model", None]), out, FakeStreamingClient(tokens=[]), session)
+    assert session.model == "opus"
+    assert len(out.errors) > 0
+    assert "usage" in out.errors[0].lower()
+
+
+def test_clear_command_gives_feedback(session: Session) -> None:
+    session.conversation.append({"role": "user", "content": "hi"})
+    out = FakeOutput()
+    run_loop(FakeInput(["/clear", None]), out, FakeStreamingClient(tokens=[]), session)
+    assert session.conversation == []
+    assert any("clear" in m.lower() for m in out.markdown_calls)
+
+
+def test_model_switch_gives_feedback(session: Session) -> None:
+    out = FakeOutput()
+    run_loop(FakeInput(["/model haiku", None]), out, FakeStreamingClient(tokens=[]), session)
+    assert session.model == "haiku"
+    assert any("haiku" in m.lower() for m in out.markdown_calls)

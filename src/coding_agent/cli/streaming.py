@@ -136,7 +136,7 @@ class AnthropicStream:
 
         with self._client.messages.stream(
             model=model,
-            max_tokens=8096,
+            max_tokens=8192,
             system=cached_system,  # type: ignore[arg-type]
             tools=cached_tools,  # type: ignore[arg-type]
             messages=messages,

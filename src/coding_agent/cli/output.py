@@ -13,15 +13,13 @@ class RichOutput:
         """Initialise with a rich Console."""
         self._console = Console()
         self._verbose = verbose
-        self._last_result: str | None = None
 
     def print_token(self, text: str) -> None:
         """Print a streaming token fragment without a newline."""
         self._console.print(text, end="")
 
     def print_tool_line(self, name: str, args: dict[str, Any], result: str) -> None:
-        """Print a collapsed tool-call line; store result for /expand."""
-        self._last_result = result
+        """Print a collapsed tool-call line."""
         byte_count = len(result.encode())
         if self._verbose:
             self._console.print(f"[cyan]▶ {name}({args})[/cyan]")
