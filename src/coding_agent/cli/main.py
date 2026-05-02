@@ -25,6 +25,15 @@ Prefer targeted edits over rewriting entire files.
 When you run a command to verify something, show the output to the user."""
 
 
+def _load_claude_md(start: Path) -> tuple[Path, str] | None:
+    """Walk up from start, return (path, content) of the first CLAUDE.md found."""
+    for directory in [start, *start.parents]:
+        candidate = directory / "CLAUDE.md"
+        if candidate.is_file():
+            return candidate, candidate.read_text()
+    return None
+
+
 def _build_tools() -> list[dict[str, Any]]:
     return [
         {"name": t.name, "description": t.description, "input_schema": t.input_schema}
@@ -56,6 +65,11 @@ def main() -> None:
     if args.system:
         system_prompt = Path(args.system).read_text()
 
+    claude_md = _load_claude_md(Path.cwd())
+    if claude_md is not None:
+        claude_md_path, claude_md_content = claude_md
+        system_prompt = system_prompt + "\n\n" + claude_md_content
+
     session = Session(
         model=args.model,
         system_prompt=system_prompt,
@@ -78,6 +92,8 @@ def main() -> None:
         active_handle[0] = h
 
     out.print_markdown("**coding-agent** — type `/help` for commands, Ctrl+D to exit\n")
+    if claude_md is not None:
+        out.print_markdown(f"Using **CLAUDE.md** from `{claude_md_path}`\n")
 
     run_loop(inp, out, client, session, tool_executor=_make_executor(), on_handle=_store_handle)
 
