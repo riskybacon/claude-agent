@@ -1,1 +1,1 @@
-"""coding_agent — progressive coding-agent implementations."""
+"""coding_agent — CLI coding assistant powered by the Anthropic API."""

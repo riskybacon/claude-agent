@@ -10,8 +10,7 @@ dependencies = [
 ]
 
 [project.scripts]
-coding-agent = "coding_agent.chat:main"
-coding-agent-cli = "coding_agent.cli.main:main"
+coding-agent = "coding_agent.cli.main:main"
 
 [build-system]
 requires = ["hatchling"]

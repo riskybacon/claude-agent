@@ -6,15 +6,8 @@ platforms = ["osx-arm64"]
 version = "0.1.0"
 
 [tasks]
-chat = "python -m coding_agent.chat"
-test = "pytest"
 cli = "python -m coding_agent.cli.main"
-read = "python -m coding_agent.read"
-list-files = "python -m coding_agent.list_files"
-bash = "python -m coding_agent.bash"
-edit = "python -m coding_agent.edit"
-code-search = "python -m coding_agent.code_search"
-agent = "python -m coding_agent.agent"
+test = "pytest"
 lint = "ruff check src/"
 fmt = "ruff format src/"
 typecheck = "mypy"

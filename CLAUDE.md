@@ -2,20 +2,12 @@
 
 ## Project Overview
 
-A step-by-step Python port of the [how-to-build-a-coding-agent](https://github.com/anthropics/anthropic-cookbook) workshop. Each module in `src/coding_agent/` is a self-contained, runnable step that adds one capability on top of the previous one.
+A CLI coding assistant powered by the Anthropic API. The agent streams responses
+token-by-token, executes tools (read, list, bash, edit, search), and manages a
+multi-turn conversation session with prompt caching and a sliding-window context limit.
 
-| Step | Module | Tool(s) added |
-|------|--------|---------------|
-| 1 | `chat.py` | — (basic chat loop) |
-| 2 | `read.py` | `read_file` |
-| 3 | `list_files.py` | `list_files` |
-| 4 | `bash.py` | `bash` |
-| 5 | `edit.py` | `edit_file` |
-| 6 | `code_search.py` | `code_search` |
-
-Each step is a complete agent — it does not import from previous steps.
-
-The production CLI lives in `src/coding_agent/cli/` and is separate from the step modules.
+The CLI lives in `src/coding_agent/cli/`. Tool implementations live in
+`src/coding_agent/tools.py`.
 
 ## Development
 
@@ -26,12 +18,10 @@ pixi install
 pixi run install-hooks   # installs the pre-commit lint hook
 ```
 
-**Run a step**:
+**Run the agent**:
 
 ```
-pixi run chat       # step 1
-pixi run read       # step 2
-# etc.
+pixi run cli
 ```
 
 **Code quality** (run globally before committing — not just on changed files):
