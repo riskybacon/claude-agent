@@ -2,10 +2,10 @@
 
 from typing import TYPE_CHECKING, Any
 
-from coding_agent.cli.commands import parse_command
-from coding_agent.cli.protocols import InputReader, OutputWriter, StreamingClient
-from coding_agent.cli.session import Session
-from coding_agent.cli.streaming import stream_response
+from claude_agent.cli.commands import parse_command
+from claude_agent.cli.protocols import InputReader, OutputWriter, StreamingClient
+from claude_agent.cli.session import Session
+from claude_agent.cli.streaming import stream_response
 
 if TYPE_CHECKING:
     from collections.abc import Callable

@@ -1,6 +1,6 @@
-# coding-agent
+# claude-agent
 
-A hands-on project for building a coding agent with Claude, step by step.
+A hands-on project for building a claude-agent, step by step.
 
 ## Prerequisites
 

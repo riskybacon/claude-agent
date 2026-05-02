@@ -10,8 +10,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from coding_agent.cli.session import Session
-from coding_agent.cli.streaming import AnthropicStream, stream_response
+from claude_agent.cli.session import Session
+from claude_agent.cli.streaming import AnthropicStream, stream_response
 from tests.fakes import FakeOutput
 
 

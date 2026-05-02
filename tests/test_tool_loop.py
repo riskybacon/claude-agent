@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from coding_agent.cli.session import Session
+from claude_agent.cli.session import Session
 from tests.fakes import FakeInput, FakeOutput, FakeStreamHandle
 
 
@@ -42,7 +42,7 @@ def session() -> Session:
 
 def test_tool_is_executed_and_result_appended(session: Session) -> None:
     """run_loop must execute the tool Claude calls and feed the result back."""
-    from coding_agent.cli.loop import run_loop
+    from claude_agent.cli.loop import run_loop
 
     first = FakeStreamHandle(tool_uses=[{"name": "bash", "id": "tu_1", "input": {"command": "ls"}}])
     second = FakeStreamHandle(tokens=["Done!"])
@@ -62,7 +62,7 @@ def test_tool_is_executed_and_result_appended(session: Session) -> None:
 
 def test_tool_result_added_to_conversation(session: Session) -> None:
     """Tool results must appear in the conversation so Claude sees them."""
-    from coding_agent.cli.loop import run_loop
+    from claude_agent.cli.loop import run_loop
 
     first = FakeStreamHandle(tool_uses=[{"name": "bash", "id": "tu_1", "input": {"command": "ls"}}])
     second = FakeStreamHandle(tokens=["Done!"])
@@ -83,7 +83,7 @@ def test_tool_result_added_to_conversation(session: Session) -> None:
 
 def test_large_tool_result_is_truncated_in_conversation(session: Session) -> None:
     """Tool results over 1000 chars must be truncated before storing in conversation."""
-    from coding_agent.cli.loop import run_loop, _MAX_TOOL_RESULT_IN_HISTORY
+    from claude_agent.cli.loop import run_loop, _MAX_TOOL_RESULT_IN_HISTORY
 
     big_result = "x" * 5000
     first = FakeStreamHandle(tool_uses=[{"name": "read_file", "id": "tu_1", "input": {"path": "big.py"}}])
@@ -113,7 +113,7 @@ def test_large_tool_result_is_truncated_in_conversation(session: Session) -> Non
 
 def test_small_tool_result_is_stored_in_full(session: Session) -> None:
     """Tool results under 1000 chars must be stored verbatim."""
-    from coding_agent.cli.loop import run_loop, _MAX_TOOL_RESULT_IN_HISTORY
+    from claude_agent.cli.loop import run_loop, _MAX_TOOL_RESULT_IN_HISTORY
 
     small_result = "file.py\nother.py\n"
     first = FakeStreamHandle(tool_uses=[{"name": "bash", "id": "tu_1", "input": {"command": "ls"}}])
@@ -140,7 +140,7 @@ def test_small_tool_result_is_stored_in_full(session: Session) -> None:
 
 def test_tool_call_limit_prevents_runaway_loops(session: Session) -> None:
     """Tool call limits should prevent infinite loops and runaway costs."""
-    from coding_agent.cli.loop import run_loop, _MAX_TOOL_CALLS_PER_TURN
+    from claude_agent.cli.loop import run_loop, _MAX_TOOL_CALLS_PER_TURN
 
     # Create a stream that keeps generating tool calls
     many_tools = [{"name": "bash", "id": f"tu_{i}", "input": {"command": "echo hi"}} 
@@ -166,7 +166,7 @@ def test_tool_call_limit_prevents_runaway_loops(session: Session) -> None:
 
 def test_full_result_still_available_for_expand(session: Session) -> None:
     """session.last_tool_result must hold the full result even when conversation is truncated."""
-    from coding_agent.cli.loop import run_loop
+    from claude_agent.cli.loop import run_loop
 
     big_result = "y" * 5000
     first = FakeStreamHandle(tool_uses=[{"name": "read_file", "id": "tu_1", "input": {"path": "f.py"}}])

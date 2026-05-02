@@ -1,4 +1,4 @@
-"""All tool definitions for the coding agent."""
+"""All tool definitions for the claude-agent."""
 
 import json
 import subprocess

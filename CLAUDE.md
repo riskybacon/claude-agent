@@ -1,4 +1,4 @@
-# coding-agent — Agent Guidelines
+# claude-agent — Agent Guidelines
 
 ## Project Overview
 
@@ -6,8 +6,8 @@ A CLI coding assistant powered by the Anthropic API. The agent streams responses
 token-by-token, executes tools (read, list, bash, edit, search), and manages a
 multi-turn conversation session with prompt caching and a sliding-window context limit.
 
-The CLI lives in `src/coding_agent/cli/`. Tool implementations live in
-`src/coding_agent/tools.py`.
+The CLI lives in `src/claude_agent/cli/`. Tool implementations live in
+`src/claude_agent/tools.py`.
 
 ## Development
 
@@ -77,7 +77,7 @@ user input
 
 `Agent._run_tool_loop()` owns this inner loop. `Agent.run()` owns the outer user-input loop. New tools are registered by appending a `Tool` instance to the list passed to `Agent`.
 
-## Architecture: CLI (`src/coding_agent/cli/`)
+## Architecture: CLI (`src/claude_agent/cli/`)
 
 The CLI is built around Protocol-based dependency injection so every layer is unit-testable without a real terminal or network.
 

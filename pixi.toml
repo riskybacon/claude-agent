@@ -1,12 +1,12 @@
 [workspace]
 authors = ["Jeff Bowles <jbowles@riskybacon.com>"]
 channels = ["conda-forge"]
-name = "coding-agent"
+name = "claude-agent"
 platforms = ["osx-arm64", "osx-64", "linux-64"]
 version = "0.1.0"
 
 [tasks]
-chat = "python -m coding_agent.cli.main"
+chat = "python -m claude_agent.cli.main"
 test = "pytest"
 lint = "ruff check src/"
 fmt = "ruff format src/"
@@ -26,4 +26,4 @@ mypy = ">=1.20.2,<2"
 hatchling = ">=1.27.0,<2"
 
 [pypi-dependencies]
-coding-agent = { path = ".", editable = true }
+claude-agent = { path = ".", editable = true }

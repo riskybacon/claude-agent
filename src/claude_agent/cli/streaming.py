@@ -3,8 +3,8 @@
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Protocol
 
-from coding_agent.cli.protocols import OutputWriter, StreamingClient
-from coding_agent.cli.session import Session
+from claude_agent.cli.protocols import OutputWriter, StreamingClient
+from claude_agent.cli.session import Session
 
 if TYPE_CHECKING:
     from collections.abc import Generator

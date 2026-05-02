@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from coding_agent.cli.session import Session
-from coding_agent.cli.streaming import stream_response
+from claude_agent.cli.session import Session
+from claude_agent.cli.streaming import stream_response
 from tests.fakes import FakeInput, FakeOutput, FakeStreamHandle, FakeStreamingClient
 
 
@@ -47,7 +47,7 @@ def test_cancellation_via_on_handle_suppresses_tool_calls() -> None:
 
 
 def test_loop_continues_after_cancellation() -> None:
-    from coding_agent.cli.loop import run_loop
+    from claude_agent.cli.loop import run_loop
 
     session = Session(model="opus", system_prompt="system", tools=[])
     handle = FakeStreamHandle()

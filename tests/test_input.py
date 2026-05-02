@@ -1,6 +1,6 @@
 """Tests for PromptToolkitInput setup (non-interactive parts)."""
 
-from coding_agent.cli.input import _make_bindings
+from claude_agent.cli.input import _make_bindings
 
 
 def test_make_bindings_does_not_raise() -> None:

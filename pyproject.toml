@@ -1,7 +1,7 @@
 [project]
-name = "coding-agent"
+name = "claude-agent"
 version = "0.1.0"
-description = "Build your own coding agent — Python edition"
+description = "Build your own claude-agent — Python edition"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Jeff Bowles", email = "jbowles@riskybacon.com" }]
 requires-python = ">=3.14"
@@ -10,14 +10,14 @@ dependencies = [
 ]
 
 [project.scripts]
-coding-agent = "coding_agent.cli.main:main"
+claude-agent = "claude_agent.cli.main:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/coding_agent"]
+packages = ["src/claude_agent"]
 
 [tool.ruff]
 target-version = "py314"
@@ -46,7 +46,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["coding_agent"]
+known-first-party = ["claude_agent"]
 
 [tool.mypy]
 python_version = "3.14"

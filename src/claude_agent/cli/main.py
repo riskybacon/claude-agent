@@ -8,12 +8,12 @@ from typing import Any
 
 import anthropic
 
-from coding_agent.cli.input import PromptToolkitInput
-from coding_agent.cli.loop import run_loop
-from coding_agent.cli.output import RichOutput
-from coding_agent.cli.session import Session
-from coding_agent.cli.streaming import AnthropicStream
-from coding_agent.tools import ALL_TOOLS
+from claude_agent.cli.input import PromptToolkitInput
+from claude_agent.cli.loop import run_loop
+from claude_agent.cli.output import RichOutput
+from claude_agent.cli.session import Session
+from claude_agent.cli.streaming import AnthropicStream
+from claude_agent.tools import ALL_TOOLS
 
 _DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
@@ -55,7 +55,7 @@ def _make_executor() -> Any:  # noqa: ANN401
 
 def main() -> None:
     """Parse args, wire real implementations, run the loop."""
-    parser = argparse.ArgumentParser(description="coding-agent CLI")
+    parser = argparse.ArgumentParser(description="claude-agent CLI")
     parser.add_argument("--model", default=_DEFAULT_MODEL, help="Model to use")
     parser.add_argument("--system", help="Path to a file containing a custom system prompt")
     parser.add_argument("--verbose", action="store_true", help="Print full tool results inline")
@@ -94,7 +94,7 @@ def main() -> None:
     def _store_handle(h: Any) -> None:  # noqa: ANN401
         active_handle[0] = h
 
-    out.print_markdown("**coding-agent** — type `/help` for commands, Ctrl+D to exit\n")
+    out.print_markdown("**claude-agent** — type `/help` for commands, Ctrl+D to exit\n")
     if claude_md is not None:
         out.print_markdown(f"Using **CLAUDE.md** from `{claude_md_path}`\n")
 

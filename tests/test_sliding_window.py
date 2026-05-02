@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from coding_agent.cli.streaming import _trim_to_turns
+from claude_agent.cli.streaming import _trim_to_turns
 
 
 def _user(text: str) -> dict[str, Any]:

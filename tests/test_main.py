@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from coding_agent.cli.main import _load_claude_md
+from claude_agent.cli.main import _load_claude_md
 
 
 def test_returns_content_and_path_when_file_in_start_dir(tmp_path: Path) -> None:

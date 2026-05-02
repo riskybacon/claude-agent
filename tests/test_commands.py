@@ -1,6 +1,6 @@
 """Tests for slash command parsing."""
 
-from coding_agent.cli.commands import parse_command
+from claude_agent.cli.commands import parse_command
 
 
 def test_parse_clear() -> None:

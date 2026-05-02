@@ -23,7 +23,7 @@ subsequent call in the session.
 
 ## Method 1 — Truncate tool results in conversation history
 
-**Status:** Implemented in `src/coding_agent/cli/loop.py` (`_run_turn`).
+**Status:** Implemented in `src/claude_agent/cli/loop.py` (`_run_turn`).
 
 **Constant:** `_MAX_TOOL_RESULT_IN_HISTORY = 1000`
 
@@ -49,7 +49,7 @@ requiring exact cross-file diffs it may occasionally need a second read.
 
 ## Method 2 — Prompt caching
 
-**Status:** Implemented in `src/coding_agent/cli/streaming.py`
+**Status:** Implemented in `src/claude_agent/cli/streaming.py`
 (`AnthropicStream.stream`).
 
 The Anthropic API supports caching stable input prefixes server-side for 5
@@ -160,7 +160,7 @@ messages=_trim_to_turns(session.conversation, max_turns=20)
 
 ## Method 4 — Cost Mitigation & Runaway Prevention
 
-**Status:** Implemented in `src/coding_agent/cli/loop.py` and `src/coding_agent/cli/session.py`.
+**Status:** Implemented in `src/claude_agent/cli/loop.py` and `src/claude_agent/cli/session.py`.
 
 Even with token efficiency measures, coding agents can still generate runaway costs through:
 - Infinite tool loops (agent keeps calling tools without progress)  

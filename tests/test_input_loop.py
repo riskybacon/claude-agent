@@ -5,8 +5,8 @@ from typing import Any
 
 import pytest
 
-from coding_agent.cli.loop import run_loop
-from coding_agent.cli.session import Session
+from claude_agent.cli.loop import run_loop
+from claude_agent.cli.session import Session
 from tests.fakes import FakeInput, FakeOutput, FakeStreamingClient
 
 

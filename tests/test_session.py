@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from coding_agent.cli.session import Session
+from claude_agent.cli.session import Session
 
 
 def _make_session(
