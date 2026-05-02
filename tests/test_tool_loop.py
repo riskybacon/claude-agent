@@ -27,7 +27,7 @@ class _SequentialStreamingClient:
         system: str,  # noqa: ARG002
         tools: list[dict[str, Any]],  # noqa: ARG002
         messages: list[Any],  # noqa: ARG002
-    ):  # noqa: ANN202
+    ) -> Any:  # noqa: ANN202
         yield self._handles.pop(0) if self._handles else FakeStreamHandle()
 
 
@@ -44,7 +44,7 @@ def test_tool_is_executed_and_result_appended(session: Session) -> None:
     second = FakeStreamHandle(tokens=["Done!"])
     client = _SequentialStreamingClient([first, second])
 
-    executed: list[tuple[str, dict]] = []
+    executed: list[tuple[str, dict[str, Any]]] = []
 
     def executor(name: str, tool_input: dict[str, Any]) -> tuple[str, bool]:
         executed.append((name, tool_input))
@@ -99,7 +99,10 @@ def test_large_tool_result_is_truncated_in_conversation(session: Session) -> Non
         m for m in session.conversation
         if m["role"] == "user" and isinstance(m["content"], list)
     )
-    stored = tool_result_msg["content"][0]["content"]
+    content = tool_result_msg["content"]
+    assert isinstance(content, list)
+    stored = content[0]["content"]  # type: ignore[index]
+    assert isinstance(stored, str)
     assert len(stored) <= _MAX_TOOL_RESULT_IN_HISTORY + 100  # allow for truncation suffix
     assert "truncated" in stored
 
@@ -125,7 +128,9 @@ def test_small_tool_result_is_stored_in_full(session: Session) -> None:
         m for m in session.conversation
         if m["role"] == "user" and isinstance(m["content"], list)
     )
-    stored = tool_result_msg["content"][0]["content"]
+    content = tool_result_msg["content"]
+    assert isinstance(content, list)
+    stored = content[0]["content"]  # type: ignore[index]
     assert stored == small_result
 
 

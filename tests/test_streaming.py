@@ -1,5 +1,7 @@
 """Tests for stream_response."""
 
+from typing import Any
+
 import pytest
 
 from coding_agent.cli.session import Session
@@ -45,7 +47,7 @@ def test_final_message_appended_to_conversation(session: Session) -> None:
 def test_tool_use_triggers_tool_execution(session: Session) -> None:
     tool_use = {"name": "read_file", "id": "tu_1", "input": {"path": "foo.py"}}
     client = FakeStreamingClient(tokens=[], tool_uses=[tool_use])
-    executed: list[dict] = []
+    executed: list[dict[str, Any]] = []
     stream_response(client, session, FakeOutput(), on_tool=executed.append)
     assert executed[0]["name"] == "read_file"
 

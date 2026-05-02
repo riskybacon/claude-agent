@@ -17,9 +17,15 @@ class _RaisingClient:
         self._exc = exc
 
     @contextmanager
-    def stream(self, **_kwargs: Any):  # noqa: ANN202
+    def stream(
+        self,
+        model: str,  # noqa: ARG002
+        system: str,  # noqa: ARG002
+        tools: list[dict[str, Any]],  # noqa: ARG002
+        messages: list[Any],  # noqa: ARG002
+    ) -> Any:
         raise self._exc
-        yield  # noqa: unreachable — makes this a generator so @contextmanager works
+        yield  # type: ignore[unreachable]  # makes this a generator so @contextmanager works
 
 
 @pytest.fixture()
@@ -86,11 +92,11 @@ def test_loop_continues_after_api_error(session: Session) -> None:
             self._calls = 0
 
         @contextmanager
-        def stream(self, model: str, system: str, tools: Any, messages: Any):  # noqa: ANN202
+        def stream(self, model: str, system: str, tools: Any, messages: Any) -> Any:  # noqa: ANN202
             self._calls += 1
             if self._calls == 1:
                 raise RuntimeError("rate limit")
-                yield  # noqa: unreachable
+                yield  # type: ignore[unreachable]
             else:
                 yield FakeStreamHandle(tokens=["hi"])
 

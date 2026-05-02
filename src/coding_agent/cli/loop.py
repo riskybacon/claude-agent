@@ -89,7 +89,7 @@ def _run_turn(
                 "is_error": is_error,
             })
 
-        session.conversation.append({"role": "user", "content": tool_results})
+        session.conversation.append({"role": "user", "content": tool_results})  # type: ignore[typeddict-item]
 
 
 def _dispatch(name: str, args: list[str], session: Session, out: OutputWriter) -> None:

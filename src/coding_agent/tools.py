@@ -100,19 +100,26 @@ LIST_FILES_TOOL = Tool(
 # bash
 # ---------------------------------------------------------------------------
 
+_BASH_TIMEOUT_SECONDS = 120
+
+
 def bash(tool_input: dict[str, Any]) -> str:
     """Run a bash command and return its output (stdout + stderr combined).
 
     Command failures are returned as output rather than raised as exceptions
     so Claude can read the error and decide how to proceed.
     """
-    result = subprocess.run(  # noqa: S603
-        ["bash", "-c", tool_input["command"]],  # noqa: S607
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        check=False,
-    )
+    try:
+        result = subprocess.run(  # noqa: S603
+            ["bash", "-c", tool_input["command"]],  # noqa: S607
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            check=False,
+            timeout=_BASH_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return f"Command timed out after {_BASH_TIMEOUT_SECONDS} seconds"
     if result.returncode != 0:
         return f"Command failed (exit {result.returncode}):\n{result.stdout.strip()}"
     return result.stdout.strip()
@@ -239,7 +246,16 @@ def code_search(tool_input: dict[str, Any]) -> str:
     args.append(pattern)
     args.append(tool_input.get("path", "."))
 
-    result = subprocess.run(args, capture_output=True, text=True, check=False)  # noqa: S603
+    try:
+        result = subprocess.run(  # noqa: S603
+            args,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=_BASH_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return f"Search timed out after {_BASH_TIMEOUT_SECONDS} seconds"
 
     if result.returncode == 1:
         return "No matches found"

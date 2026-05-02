@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(~/.pixi/bin/pixi run *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(pixi install *)",
+      "Bash(~/.pixi/bin/pixi install *)",
+      "Bash(git stash *)",
+      "Bash(pixi run *)"
+    ]
+  }
+}

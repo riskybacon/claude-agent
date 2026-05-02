@@ -2,11 +2,11 @@
 authors = ["Jeff Bowles <jbowles@riskybacon.com>"]
 channels = ["conda-forge"]
 name = "coding-agent"
-platforms = ["osx-arm64"]
+platforms = ["osx-arm64", "osx-64", "linux-64"]
 version = "0.1.0"
 
 [tasks]
-cli = "python -m coding_agent.cli.main"
+chat = "python -m coding_agent.cli.main"
 test = "pytest"
 lint = "ruff check src/"
 fmt = "ruff format src/"

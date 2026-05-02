@@ -60,7 +60,7 @@ def _make_anthropic_client(sdk_stream: Any) -> tuple[Any, list[dict[str, Any]]]:
     captured: list[dict[str, Any]] = []
 
     @contextmanager
-    def fake_stream_cm(*args: Any, **kwargs: Any):  # noqa: ANN202
+    def fake_stream_cm(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN202
         captured.append(kwargs)
         yield sdk_stream
 
@@ -83,7 +83,7 @@ def test_tool_uses_collected_from_final_message() -> None:
     tool_use = {"name": "read_file", "id": "tu_1", "input": {"path": "foo.py"}}
     sdk_stream = _make_sdk_stream(text_chunks=[], tool_uses=[tool_use])
     mock_client, _ = _make_anthropic_client(sdk_stream)
-    executed: list[dict] = []
+    executed: list[dict[str, Any]] = []
 
     stream_response(AnthropicStream(mock_client), _make_session(), FakeOutput(), on_tool=executed.append)
 

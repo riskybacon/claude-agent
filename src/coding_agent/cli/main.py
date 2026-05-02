@@ -15,7 +15,7 @@ from coding_agent.cli.session import Session
 from coding_agent.cli.streaming import AnthropicStream
 from coding_agent.tools import ALL_TOOLS
 
-_DEFAULT_MODEL = "claude-opus-4-5"
+_DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
 _SYSTEM_PROMPT = """You are a coding assistant working in the user's local repository.
 

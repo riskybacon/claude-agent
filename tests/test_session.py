@@ -1,15 +1,20 @@
 """Tests for session state."""
 
+from typing import Any
+
 from coding_agent.cli.session import Session
 
 
-def _make_session(**kwargs: object) -> Session:
-    defaults: dict[str, object] = {"model": "opus", "system_prompt": "default", "tools": []}
-    defaults.update(kwargs)
+def _make_session(
+    *,
+    model: str = "opus",
+    system_prompt: str = "default",
+    tools: list[dict[str, Any]] | None = None,
+) -> Session:
     return Session(
-        model=str(defaults["model"]),
-        system_prompt=str(defaults["system_prompt"]),
-        tools=list(defaults["tools"]),  # type: ignore[arg-type]
+        model=model,
+        system_prompt=system_prompt,
+        tools=tools if tools is not None else [],
     )
 
 

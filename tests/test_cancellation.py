@@ -1,5 +1,7 @@
 """Tests for Ctrl+C cancellation behaviour."""
 
+from typing import Any
+
 from coding_agent.cli.session import Session
 from coding_agent.cli.streaming import stream_response
 from tests.fakes import FakeInput, FakeOutput, FakeStreamHandle, FakeStreamingClient
@@ -21,7 +23,7 @@ def test_tool_not_executed_after_cancellation() -> None:
     tool_use = {"name": "bash", "id": "tu_1", "input": {"command": "ls"}}
     handle = FakeStreamHandle(tool_uses=[tool_use], cancelled=True)
     client = FakeStreamingClient(tokens=[], handle=handle)
-    executed: list[dict] = []
+    executed: list[dict[str, Any]] = []
     stream_response(client, _make_session(), FakeOutput(), on_tool=executed.append)
     assert executed == []
 
@@ -31,7 +33,7 @@ def test_cancellation_via_on_handle_suppresses_tool_calls() -> None:
     tool_use = {"name": "bash", "id": "tu_1", "input": {"command": "ls"}}
     handle = FakeStreamHandle(tokens=["partial"], tool_uses=[tool_use])
     client = FakeStreamingClient(tokens=[], handle=handle)
-    executed: list[dict] = []
+    executed: list[dict[str, Any]] = []
 
     stream_response(
         client,
