@@ -15,6 +15,8 @@ A step-by-step Python port of the [how-to-build-a-coding-agent](https://github.c
 
 Each step is a complete agent — it does not import from previous steps.
 
+The production CLI lives in `src/coding_agent/cli/` and is separate from the step modules.
+
 ## Development
 
 **Setup**: install [pixi](https://pixi.sh), then:
@@ -42,7 +44,24 @@ pixi run typecheck  # mypy
 
 The pre-commit hook runs `ruff check` automatically and blocks commits that fail.
 
-**Testing**: `pytest` (no tests yet — add them in `tests/` mirroring `src/` paths).
+**Testing**: `pytest` — tests live in `tests/`, mirroring `src/` paths.
+
+```
+pytest              # run all tests
+pytest tests/test_streaming.py   # run one file
+```
+
+## TDD Workflow
+
+Prefer test-first for all non-trivial changes:
+
+1. Write a failing test that exposes the missing behaviour
+2. Confirm it fails for the right reason
+3. Implement the fix
+4. Confirm it passes
+5. Run the full suite before committing
+
+For bug fixes: stash any in-progress changes, write the failing test, pop the stash, fix, confirm green.
 
 ## Code Style
 
@@ -50,9 +69,9 @@ The pre-commit hook runs `ruff check` automatically and blocks commits that fail
 - Do NOT use `from __future__ import annotations` — that PEP 563 pattern is legacy and was never made the default. Python 3.14 has PEP 649 deferred annotation evaluation built in, so `TYPE_CHECKING`-guarded imports already work without it.
 - Type hints everywhere; mypy is strict
 - Line length: 100 chars (`pyproject.toml`)
-- Ruff with `select = ["ALL"]` — check `pyproject.toml` for the intentional ignore list before adding a `# noqa`
+- Ruff with `select = ["ALL"]` — check `pyproject.toml` for the intentional ignore list before adding a `# noqa`. Fix the code; suppress only when the rule is genuinely inapplicable (e.g. `ARG002` on Protocol method stubs, `ANN401` on intentional `Any` callback params).
 
-## Architecture: Tool Loop
+## Architecture: Step Modules (Tool Loop)
 
 The core pattern introduced in step 2 and reused in every subsequent step:
 
@@ -67,6 +86,33 @@ user input
 ```
 
 `Agent._run_tool_loop()` owns this inner loop. `Agent.run()` owns the outer user-input loop. New tools are registered by appending a `Tool` instance to the list passed to `Agent`.
+
+## Architecture: CLI (`src/coding_agent/cli/`)
+
+The CLI is built around Protocol-based dependency injection so every layer is unit-testable without a real terminal or network.
+
+| Module | Responsibility |
+|--------|---------------|
+| `protocols.py` | `InputReader`, `OutputWriter`, `StreamHandle`, `StreamingClient` interfaces |
+| `session.py` | Conversation state — model, system prompt, tools, history |
+| `commands.py` | Slash-command parsing (`/clear`, `/model`, `/expand`, `/help`) |
+| `streaming.py` | `stream_response()`, `AnthropicStream`, sliding-window trimming |
+| `loop.py` | `run_loop()` — outer input loop; `_run_turn()` — inner tool loop |
+| `input.py` | `PromptToolkitInput` — terminal input with key bindings |
+| `output.py` | `RichOutput` — rich-formatted terminal output |
+| `main.py` | Wires real implementations, registers SIGINT handler, starts loop |
+
+Fake implementations for testing live in `tests/fakes.py` (`FakeInput`, `FakeOutput`, `FakeStreamHandle`, `FakeStreamingClient`).
+
+### Key design decisions
+
+**Conversation trimming** (`streaming.py`): `_trim_to_turns()` keeps only the last `_MAX_CONVERSATION_TURNS` turns in the slice sent to the API. A "turn" starts at every `role: user` message with plain string content — `tool_result` messages (list content) are never turn boundaries, so `tool_use`/`tool_result` pairs are never split.
+
+**Tool result truncation** (`loop.py`): Results over `_MAX_TOOL_RESULT_IN_HISTORY` characters are truncated before being stored in conversation history. `session.last_tool_result` always holds the full result for `/expand`.
+
+**Prompt caching** (`streaming.py`): The system prompt and tool definitions are marked with `cache_control: {"type": "ephemeral"}` on every request so turns 2–N pay cache read prices for those tokens.
+
+**Cancellation** (`streaming.py`, `main.py`): `stream_response` accepts an `on_handle` callback that is called with the live stream handle as soon as streaming begins. `main.py` stores it in a mutable cell; the SIGINT handler calls `.cancel()` on whatever is in that cell, stopping the stream and returning control to the prompt.
 
 ## Commits
 
