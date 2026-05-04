@@ -14,7 +14,7 @@ from claude_agent.cli.loop import run_loop
 from claude_agent.cli.output import RichOutput
 from claude_agent.cli.session import Session
 from claude_agent.cli.streaming import AnthropicStream
-from claude_agent.tools import ALL_TOOLS, Tool
+from claude_agent.tool_registry import ToolRegistry
 
 _DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
@@ -35,25 +35,6 @@ def _load_claude_md(start: Path) -> tuple[Path, str] | None:
     return None
 
 
-def _build_tools(tools: list[Tool]) -> list[dict[str, Any]]:
-    return [
-        {"name": t.name, "description": t.description, "input_schema": t.input_schema}
-        for t in tools
-    ]
-
-
-def _make_executor(tools: list[Tool]) -> Any:  # noqa: ANN401
-    def execute(name: str, tool_input: dict[str, Any]) -> tuple[str, bool]:
-        for tool in tools:
-            if tool.name == name:
-                try:
-                    return tool.function(tool_input), False
-                except Exception as exc:  # noqa: BLE001
-                    return str(exc), True
-        return f"Tool '{name}' not found", True
-    return execute
-
-
 def main() -> None:
     """Parse args, wire real implementations, run the loop."""
     parser = argparse.ArgumentParser(description="claude-agent CLI")
@@ -72,8 +53,12 @@ def main() -> None:
         system_prompt = system_prompt + "\n\n" + claude_md_content
 
     session = Session(model=args.model, system_prompt=system_prompt, tools=[])
-    all_tools = [*ALL_TOOLS, make_check_cost_tool(session)]
-    session.tools = _build_tools(all_tools)
+
+    registry = ToolRegistry()
+    registry.discover_plugins(Path(__file__).parent.parent / "tools")
+    registry.register_tool(make_check_cost_tool(session))
+
+    session.tools = registry.build_api_defs()
 
     client = AnthropicStream(anthropic.Anthropic())
     inp = PromptToolkitInput()
@@ -99,7 +84,7 @@ def main() -> None:
 
     run_loop(
         inp, out, client, session,
-        tool_executor=_make_executor(all_tools),
+        tool_executor=registry.make_executor(),
         on_handle=_store_handle,
     )
 

@@ -30,3 +30,11 @@ class NetworkError(ClaudeAgentError):
 
 class ConfigurationError(ClaudeAgentError):
     """Configuration or setup error."""
+
+
+class ToolRegistrationError(ClaudeAgentError):
+    """Raised when a tool cannot be registered (e.g. duplicate name)."""
+
+
+class PluginDiscoveryError(ClaudeAgentError):
+    """Raised when plugin discovery fails (e.g. directory does not exist)."""
