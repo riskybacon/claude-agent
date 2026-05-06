@@ -3,7 +3,7 @@
 import subprocess
 from typing import TYPE_CHECKING, Any
 
-from claude_agent.tools import Tool
+from claude_agent.tools import Tool, ToolContext
 
 if TYPE_CHECKING:
     from claude_agent.config import AgentConfig
@@ -11,12 +11,13 @@ if TYPE_CHECKING:
 _BASH_TIMEOUT_SECONDS = 120
 
 
-def bash(tool_input: dict[str, Any], config: AgentConfig | None = None) -> str:
+def bash(tool_input: dict[str, Any], context: ToolContext) -> str:
     """Run a bash command and return its output (stdout + stderr combined).
 
     Command failures are returned as output rather than raised as exceptions
     so Claude can read the error and decide how to proceed.
     """
+    config: AgentConfig | None = context.config
     timeout_seconds = config.bash_timeout_seconds if config else _BASH_TIMEOUT_SECONDS
     try:
         result = subprocess.run(  # noqa: S603

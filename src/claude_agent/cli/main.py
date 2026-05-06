@@ -8,13 +8,13 @@ from typing import Any
 
 import anthropic
 
-from claude_agent.cli.cost_tool import make_check_cost_tool
 from claude_agent.cli.input import PromptToolkitInput
 from claude_agent.cli.loop import run_loop
 from claude_agent.cli.output import RichOutput
 from claude_agent.cli.session import Session
 from claude_agent.cli.streaming import AnthropicStream
 from claude_agent.tool_registry import ToolRegistry
+from claude_agent.tools import ToolContext
 
 _DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
@@ -56,7 +56,6 @@ def main() -> None:
 
     registry = ToolRegistry()
     registry.discover_plugins(Path(__file__).parent.parent / "tools")
-    registry.register_tool(make_check_cost_tool(session))
 
     session.tools = registry.build_api_defs()
 
@@ -82,9 +81,10 @@ def main() -> None:
     if claude_md is not None:
         out.print_markdown(f"Using **CLAUDE.md** from `{claude_md_path}`\n")
 
+    context = ToolContext(session=session)
     run_loop(
         inp, out, client, session,
-        tool_executor=registry.make_executor(),
+        tool_executor=registry.make_executor(context),
         on_handle=_store_handle,
     )
 

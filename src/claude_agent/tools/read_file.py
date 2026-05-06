@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import Any
 
 from claude_agent.exceptions import FileSystemError
-from claude_agent.tools import Tool
+from claude_agent.tools import Tool, ToolContext
 
 
-def read_file(tool_input: dict[str, Any]) -> str:
+def read_file(tool_input: dict[str, Any], context: ToolContext) -> str:  # noqa: ARG001
     """Return the contents of the file at the given path."""
     path = Path(tool_input["path"])
     try:

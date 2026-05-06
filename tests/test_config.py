@@ -6,8 +6,9 @@ from unittest.mock import patch
 from claude_agent.cli.session import Session
 from claude_agent.cli.streaming import stream_response
 from claude_agent.config import AgentConfig
+from claude_agent.tools import ToolContext
 from claude_agent.tools.bash import bash
-from tests.fakes import FakeOutput, FakeStreamingClient
+from tests.fakes import FakeOutput, FakeSession, FakeStreamingClient
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -140,11 +141,12 @@ def test_bash_tool_uses_config_timeout() -> None:
     """Bash tool should respect config timeout value."""
     config = AgentConfig(bash_timeout_seconds=60)
     expected_timeout = 60
+    ctx = ToolContext(session=FakeSession(), config=config)
 
     with patch("claude_agent.tools.bash.subprocess.run") as mock_run:
         mock_run.return_value.returncode = 0
         mock_run.return_value.stdout = "test output"
-        bash({"command": "echo test"}, config)
+        bash({"command": "echo test"}, ctx)
 
         _, kwargs = mock_run.call_args
         assert kwargs["timeout"] == expected_timeout

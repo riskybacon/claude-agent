@@ -8,7 +8,8 @@ import pytest
 import claude_agent.tools as _builtin_tools_pkg
 from claude_agent.exceptions import PluginDiscoveryError, ToolRegistrationError
 from claude_agent.tool_registry import ToolRegistry
-from claude_agent.tools import Tool
+from claude_agent.tools import Tool, ToolContext
+from tests.fakes import FakeSession
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "plugins"
 
@@ -16,13 +17,18 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures" / "plugins"
 def _make_tool(name: str, *, fn: Any = None) -> Tool:  # noqa: ANN401
     """Build a minimal Tool for testing."""
     if fn is None:
-        fn = lambda _input: f"{name} result"  # noqa: E731
+        fn = lambda _input, _ctx: f"{name} result"  # noqa: E731
     return Tool(
         name=name,
         description=f"Description for {name}",
         input_schema={"type": "object", "properties": {}},
         function=fn,
     )
+
+
+def _ctx() -> ToolContext:
+    """Return a minimal ToolContext for tests."""
+    return ToolContext(session=FakeSession())
 
 
 # ---------------------------------------------------------------------------
@@ -120,8 +126,8 @@ def test_build_api_defs_order_matches_registration() -> None:
 def test_executor_dispatches_by_name() -> None:
     """make_executor returns a callable that routes calls to the correct tool."""
     registry = ToolRegistry()
-    registry.register_tool(_make_tool("greet", fn=lambda _: "hello"))
-    executor = registry.make_executor()
+    registry.register_tool(_make_tool("greet", fn=lambda _input, _ctx: "hello"))
+    executor = registry.make_executor(_ctx())
     result, is_error = executor("greet", {})
     assert result == "hello"
     assert is_error is False
@@ -131,22 +137,37 @@ def test_executor_passes_input_to_function() -> None:
     """The executor forwards tool_input unchanged to the tool function."""
     received: list[dict[str, Any]] = []
 
-    def capture(tool_input: dict[str, Any]) -> str:
+    def capture(tool_input: dict[str, Any], context: ToolContext) -> str:  # noqa: ARG001
         """Capture invocation args."""
         received.append(tool_input)
         return "ok"
 
     registry = ToolRegistry()
     registry.register_tool(_make_tool("capture", fn=capture))
-    executor = registry.make_executor()
-    executor("capture", {"key": "value"})
+    registry.make_executor(_ctx())("capture", {"key": "value"})
     assert received == [{"key": "value"}]
+
+
+def test_executor_passes_context_to_function() -> None:
+    """The executor forwards the bound ToolContext to every tool call."""
+    received: list[ToolContext] = []
+
+    def capture(_tool_input: dict[str, Any], context: ToolContext) -> str:
+        """Capture the context passed in."""
+        received.append(context)
+        return "ok"
+
+    ctx = _ctx()
+    registry = ToolRegistry()
+    registry.register_tool(_make_tool("capture", fn=capture))
+    registry.make_executor(ctx)("capture", {})
+    assert received == [ctx]
 
 
 def test_executor_unknown_tool_returns_error_tuple() -> None:
     """Calling an unregistered tool name returns an error tuple."""
     registry = ToolRegistry()
-    executor = registry.make_executor()
+    executor = registry.make_executor(_ctx())
     result, is_error = executor("nonexistent", {})
     assert is_error is True
     assert "nonexistent" in result
@@ -154,14 +175,14 @@ def test_executor_unknown_tool_returns_error_tuple() -> None:
 
 def test_executor_catches_tool_exception() -> None:
     """An exception raised by a tool is caught and returned as an error tuple."""
-    def boom(_input: dict[str, Any]) -> str:
+    def boom(_input: dict[str, Any], _ctx: ToolContext) -> str:
         """Raise unconditionally."""
         msg = "something broke"
         raise RuntimeError(msg)
 
     registry = ToolRegistry()
     registry.register_tool(_make_tool("boom", fn=boom))
-    executor = registry.make_executor()
+    executor = registry.make_executor(_ctx())
     result, is_error = executor("boom", {})
     assert is_error is True
     assert "something broke" in result
@@ -171,7 +192,7 @@ def test_executor_snapshot_is_independent_of_later_registrations() -> None:
     """An executor created before a registration does not see the new tool."""
     registry = ToolRegistry()
     registry.register_tool(_make_tool("first"))
-    executor = registry.make_executor()
+    executor = registry.make_executor(_ctx())
     registry.register_tool(_make_tool("second"))
     _, is_error = executor("second", {})
     assert is_error is True
@@ -268,4 +289,4 @@ def test_builtin_tools_package_is_discoverable() -> None:
     registry = ToolRegistry()
     registry.discover_plugins(tools_dir)
     names = {t.name for t in registry.get_enabled_tools()}
-    assert names == {"read_file", "list_files", "bash", "edit_file", "code_search"}
+    assert names == {"read_file", "list_files", "bash", "edit_file", "code_search", "check_cost"}

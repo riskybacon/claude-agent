@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from claude_agent.tools import Tool
+from claude_agent.tools import Tool, ToolContext
 
 _SKIP_DIRS = {".git", ".pixi", "__pycache__", ".mypy_cache", ".ruff_cache"}
 
@@ -21,7 +21,7 @@ def _collect(root: Path, current: Path, entries: list[str]) -> None:
             entries.append(str(item.relative_to(root)))
 
 
-def list_files(tool_input: dict[str, Any]) -> str:
+def list_files(tool_input: dict[str, Any], context: ToolContext) -> str:  # noqa: ARG001
     """Return a JSON array of paths under the given directory."""
     root = Path(tool_input.get("path", "."))
     entries: list[str] = []

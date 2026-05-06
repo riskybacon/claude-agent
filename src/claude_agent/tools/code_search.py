@@ -3,13 +3,13 @@
 import subprocess
 from typing import Any
 
-from claude_agent.tools import Tool
+from claude_agent.tools import Tool, ToolContext
 
 _MAX_SEARCH_MATCHES = 50
 _BASH_TIMEOUT_SECONDS = 120
 
 
-def code_search(tool_input: dict[str, Any]) -> str:
+def code_search(tool_input: dict[str, Any], context: ToolContext) -> str:  # noqa: ARG001
     """Search for a pattern using ripgrep; return matching lines with file and line number.
 
     ripgrep exits with code 1 when there are no matches — that is not an error.

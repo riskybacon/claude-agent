@@ -3,10 +3,10 @@
 from pathlib import Path
 from typing import Any
 
-from claude_agent.tools import Tool
+from claude_agent.tools import Tool, ToolContext
 
 
-def edit_file(tool_input: dict[str, Any]) -> str:
+def edit_file(tool_input: dict[str, Any], context: ToolContext) -> str:  # noqa: ARG001
     """Create, append to, or perform a unique string replacement in a file.
 
     Three cases based on old_str and whether the file exists:

@@ -1,12 +1,25 @@
 """Fake implementations of CLI protocols for testing."""
 
 from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
     import anthropic
+
+
+@dataclass
+class FakeSession:
+    """Minimal SessionInfo-compatible object for tests that need a ToolContext."""
+
+    model: str = "claude-sonnet-4-6"
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_read_tokens: int = 0
+    cache_creation_tokens: int = 0
+    tool_calls_made: int = 0
 
 
 class FakeInput:
@@ -38,7 +51,7 @@ class FakeOutput:
         self._first_token_received: bool = False
         # Ordered log of all output events for interleaving assertions.
         # Each entry is a tuple whose first element is the event kind:
-        #   ("token", text), ("newline",), ("tool_line", name, args, result)
+        #   ("token", text), ("newline",), ("tool_line", name, args, result)  # noqa: ERA001
         self.events: list[tuple[Any, ...]] = []
 
     def print_token(self, text: str) -> None:
@@ -87,7 +100,7 @@ class FakeOutput:
 class FakeStreamHandle:
     """Fake stream handle with pre-set tokens and tool uses."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         tokens: list[str] | None = None,
         tool_uses: list[dict[str, Any]] | None = None,

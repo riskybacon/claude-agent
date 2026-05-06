@@ -4,7 +4,7 @@ import importlib.util
 from typing import TYPE_CHECKING, Any
 
 from claude_agent.exceptions import PluginDiscoveryError, ToolRegistrationError
-from claude_agent.tools import Tool
+from claude_agent.tools import Tool, ToolContext
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -70,14 +70,16 @@ class ToolRegistry:
     # Executor factory
     # ------------------------------------------------------------------
 
-    def make_executor(self) -> Callable[[str, dict[str, Any]], tuple[str, bool]]:
+    def make_executor(
+        self, context: ToolContext
+    ) -> Callable[[str, dict[str, Any]], tuple[str, bool]]:
         """Return a callable that dispatches tool calls by name.
 
-        The executor captures the current registry state; tools registered
-        after this call are *not* visible to the returned callable.
-        This makes the executor's behaviour predictable for a given session.
+        *context* is bound at executor-creation time and forwarded to every
+        tool call. The executor also captures the current registry state;
+        tools registered after this call are not visible to it.
         """
-        dispatch: dict[str, Callable[[dict[str, Any]], str]] = {
+        dispatch: dict[str, Callable[[dict[str, Any], ToolContext], str]] = {
             t.name: t.function for t in self._tools
         }
 
@@ -86,7 +88,7 @@ class ToolRegistry:
             if name not in dispatch:
                 return f"Tool '{name}' not found", True
             try:
-                return dispatch[name](tool_input), False
+                return dispatch[name](tool_input, context), False
             except Exception as exc:  # noqa: BLE001
                 return str(exc), True
 

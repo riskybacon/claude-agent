@@ -1,14 +1,17 @@
-"""Tests for the check_cost tool factory."""
+"""Tests for the check_cost tool."""
 
 import re
 
 import pytest
 
-from claude_agent.cli.session import Session
+from claude_agent.tools import ToolContext
+from claude_agent.tools.cost import CHECK_COST_TOOL
+from tests.fakes import FakeSession
 
 
-def _session(model: str = "claude-sonnet-4-6") -> Session:
-    return Session(model=model, system_prompt="s", tools=[])
+def _ctx(model: str = "claude-sonnet-4-6") -> ToolContext:
+    """Return a ToolContext wrapping a fresh FakeSession."""
+    return ToolContext(session=FakeSession(model=model))
 
 
 def _extract_dollar(text: str) -> float:
@@ -19,72 +22,53 @@ def _extract_dollar(text: str) -> float:
 
 def test_check_cost_tool_has_correct_name() -> None:
     """Tool name must be 'check_cost' so Claude can call it by name."""
-    from claude_agent.cli.cost_tool import make_check_cost_tool
-
-    tool = make_check_cost_tool(_session())
-    assert tool.name == "check_cost"
+    assert CHECK_COST_TOOL.name == "check_cost"
 
 
 def test_check_cost_returns_string() -> None:
     """Tool function must return a plain string."""
-    from claude_agent.cli.cost_tool import make_check_cost_tool
-
-    tool = make_check_cost_tool(_session())
-    result = tool.function({})
+    result = CHECK_COST_TOOL.function({}, _ctx())
     assert isinstance(result, str)
 
 
 def test_check_cost_zero_when_no_tokens() -> None:
     """Zero tokens → $0.0000 reported."""
-    from claude_agent.cli.cost_tool import make_check_cost_tool
-
-    tool = make_check_cost_tool(_session())
-    result = tool.function({})
+    result = CHECK_COST_TOOL.function({}, _ctx())
     assert _extract_dollar(result) == pytest.approx(0.0)
 
 
 def test_check_cost_reports_input_token_cost() -> None:
     """1M Sonnet input tokens → $3.00 reported."""
-    from claude_agent.cli.cost_tool import make_check_cost_tool
-
-    s = _session()
-    s.input_tokens = 1_000_000
-    tool = make_check_cost_tool(s)
-    result = tool.function({})
+    ctx = _ctx()
+    ctx.session.input_tokens = 1_000_000
+    result = CHECK_COST_TOOL.function({}, ctx)
     assert _extract_dollar(result) == pytest.approx(3.0)
 
 
 def test_check_cost_reports_token_counts() -> None:
     """Token counts appear in the output."""
-    from claude_agent.cli.cost_tool import make_check_cost_tool
-
-    s = _session()
-    s.input_tokens = 500
-    s.output_tokens = 100
-    tool = make_check_cost_tool(s)
-    result = tool.function({})
+    ctx = _ctx()
+    ctx.session.input_tokens = 500
+    ctx.session.output_tokens = 100
+    result = CHECK_COST_TOOL.function({}, ctx)
     assert "500" in result
     assert "100" in result
 
 
 def test_check_cost_reflects_session_model() -> None:
-    """Opus costs more than Haiku for the same token counts."""
-    from claude_agent.cli.cost_tool import make_check_cost_tool
-
-    haiku = _session(model="claude-haiku-4-5-20251001")
-    opus = _session(model="claude-opus-4-7")
-    haiku.input_tokens = opus.input_tokens = 1_000_000
-    r_haiku = make_check_cost_tool(haiku).function({})
-    r_opus = make_check_cost_tool(opus).function({})
+    """Opus costs more than Haiku for the same token count."""
+    haiku_ctx = _ctx(model="claude-haiku-4-5-20251001")
+    opus_ctx = _ctx(model="claude-opus-4-7")
+    haiku_ctx.session.input_tokens = 1_000_000
+    opus_ctx.session.input_tokens = 1_000_000
+    r_haiku = CHECK_COST_TOOL.function({}, haiku_ctx)
+    r_opus = CHECK_COST_TOOL.function({}, opus_ctx)
     assert _extract_dollar(r_haiku) < _extract_dollar(r_opus)
 
 
 def test_check_cost_reads_live_session_state() -> None:
-    """Tool sees token counts added after the tool was created."""
-    from claude_agent.cli.cost_tool import make_check_cost_tool
-
-    s = _session()
-    tool = make_check_cost_tool(s)
-    s.input_tokens = 1_000_000  # add tokens after tool creation
-    result = tool.function({})
+    """Tool sees token counts mutated after the context was created."""
+    ctx = _ctx()
+    ctx.session.input_tokens = 1_000_000
+    result = CHECK_COST_TOOL.function({}, ctx)
     assert _extract_dollar(result) == pytest.approx(3.0)
